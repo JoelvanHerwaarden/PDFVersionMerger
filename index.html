@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nobleo Infra | PDF Vergelijker</title>
+    <title>Nobleo Bouw en Infra | PDF Vergelijker</title>
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <style>
         :root {
-            /* Default System Colors (Light) */
             --bg-color: #ffffff;
             --container-bg: #fbfbfd;
             --card-bg: #ffffff;
@@ -19,6 +18,7 @@
             --border-color: #d2d2d7;
             --logo-filter: none;
             --shadow: rgba(0, 66, 104, 0.08);
+            --modal-overlay: rgba(0, 43, 69, 0.85);
         }
 
         [data-theme="dark"] {
@@ -33,6 +33,7 @@
             --border-color: rgba(255, 255, 255, 0.1);
             --logo-filter: brightness(0) invert(1);
             --shadow: rgba(0, 0, 0, 0.3);
+            --modal-overlay: rgba(0, 0, 0, 0.7);
         }
 
         * {
@@ -53,11 +54,15 @@
             min-height: 100vh;
         }
 
-        /* Toggle Button Style */
-        .theme-toggle {
+        .header-controls {
             position: absolute;
             top: 20px;
             right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
             background: var(--container-bg);
             border: 1px solid var(--border-color);
             color: var(--text-main);
@@ -92,23 +97,10 @@
         .description-box {
             text-align: left;
             background: var(--container-bg);
-            padding: 2rem;
+            padding: 1.5rem 2rem;
             border-radius: 20px;
             margin-bottom: 2rem;
             border: 1px solid var(--border-color);
-        }
-
-        .description-box h3 {
-            margin-top: 0;
-            font-size: 1.1rem;
-            color: var(--accent);
-        }
-
-        .description-box p {
-            font-size: 0.95rem;
-            line-height: 1.6;
-            margin-bottom: 0;
-            color: var(--text-muted);
         }
 
         .form-card {
@@ -141,8 +133,8 @@
             background: var(--container-bg);
             border-radius: 12px;
             border: 2px dashed var(--border-color);
-            cursor: pointer;
             color: var(--text-main);
+            cursor: pointer;
         }
 
         button.main-btn { 
@@ -163,34 +155,85 @@
             box-shadow: 0 4px 15px rgba(57, 214, 178, 0.4);
         }
 
-        #status { 
-            margin-top: 1.5rem; 
-            font-weight: 500;
-            font-size: 0.9rem;
-            color: var(--text-muted);
+        /* Modal / Elevation Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--modal-overlay);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
         }
 
-        footer {
-            margin-top: auto;
-            padding: 20px;
-            font-size: 0.8rem;
-            color: var(--text-muted);
+        .modal-content {
+            background: var(--card-bg);
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            border-radius: 28px;
+            padding: 2.5rem;
+            position: relative;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.4);
+            overflow-y: auto;
+            transform: translateY(40px);
+            transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
         }
+
+        .modal-overlay.active { display: flex; }
+        .modal-overlay.active .modal-content { transform: translateY(0); }
+
+        .faq-item {
+            text-align: left;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1.5rem;
+        }
+
+        .faq-item:last-child { border-bottom: none; }
+        .faq-item h4 { margin: 0 0 0.75rem 0; color: var(--accent); font-size: 1.1rem; }
+        .faq-item p { margin: 0; font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; }
+
+        .close-modal {
+            position: sticky;
+            top: -10px; float: right;
+            background: var(--container-bg); 
+            border: 1px solid var(--border-color);
+            width: 35px; height: 35px;
+            border-radius: 50%;
+            font-size: 1.2rem; color: var(--text-main);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+
+        #status { margin-top: 1.5rem; font-size: 0.9rem; font-weight: 500; }
+
+        footer { 
+            margin-top: auto; 
+            padding: 30px; 
+            font-size: 0.85rem; 
+            color: var(--text-muted); 
+            text-align: center;
+        }
+        footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+        footer a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
 
-    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">Switch Mode</button>
+    <div class="header-controls">
+        <button class="btn-small" onclick="toggleModal()">💡 Info & FAQ</button>
+        <button class="btn-small" onclick="toggleTheme()" id="themeBtn">Mode</button>
+    </div>
 
-    <img src="https://www.nobleo-infra.nl/wp-content/uploads/2025/02/Nobleo_BI_Logo_RGB.png.webp" alt="Nobleo Infra Logo" class="logo">
+    <img src="https://www.nobleo-infra.nl/wp-content/uploads/2025/02/Nobleo_BI_Logo_RGB.png.webp" alt="Nobleo Bouw en Infra Logo" class="logo">
 
     <div class="container">
         <h2>Document Vergelijker</h2>
 
         <div class="description-box">
-            <h3>Wat doet deze tool?</h3>
-            <p>
-                Deze applicatie is ontworpen om twee PDF-rapporten samen te voegen tot één document. De pagina's worden zij-aan-zij in <strong>Landscape</strong> geplaatst voor directe visuele analyse van berekeningen of revisies.
+            <p style="margin: 0; color: var(--text-muted); line-height: 1.5;">
+                Selecteer twee PDF-rapporten om deze <strong>zij-aan-zij</strong> samen te voegen. Ideaal voor het snel valideren van revisies, berekeningen of ontwerpwijzigingen.
             </p>
         </div>
 
@@ -210,30 +253,74 @@
         </div>
     </div>
 
-    <footer>&copy; Nobleo Infra - Professional Engineering Solutions</footer>
+    <div class="modal-overlay" id="faqModal" onclick="closeModal(event)">
+        <div class="modal-content">
+            <button class="close-modal" onclick="toggleModal()">×</button>
+            <h2 style="text-align: left; margin-top: 0;">Veelgestelde Vragen</h2>
+            
+            <div class="faq-item">
+                <h4>Hoe wordt mijn privacy gewaarborgd?</h4>
+                <p>
+                    Veiligheid is onze prioriteit. In tegenstelling tot online converters worden uw documenten <strong>niet geüpload naar een server</strong>. De volledige verwerking vindt plaats in het tijdelijke geheugen van uw eigen browser. Zodra u het tabblad sluit, zijn alle gegevens gewist. Dit maakt de tool uitermate geschikt voor vertrouwelijke projectstukken.
+                </p>
+            </div>
+
+            <div class="faq-item">
+                <h4>Wat gebeurt er bij een ongelijk aantal pagina's?</h4>
+                <p>
+                    De tool synchroniseert beide documenten op paginanummer. Als Document A 10 pagina's heeft en Document B slechts 8, dan zal de resulterende vergelijking 10 pagina's tellen. Op de laatste twee pagina's blijft de rechterkant (Document B) leeg. Dit zorgt ervoor dat pagina 5 van de referentie altijd naast pagina 5 van de wijziging staat.
+                </p>
+            </div>
+
+            <div class="faq-item">
+                <h4>Waarom werkt de tool niet met beveiligde PDF's?</h4>
+                <p>
+                    PDF-beveiliging (zoals versleuteling of restricties op kopiëren) voorkomt dat externe scripts de pagina-inhoud kunnen 'lezen'. Om technische fouten en inbreuk op beveiliging te voorkomen, kunnen deze bestanden niet worden verwerkt. U dient eerst de beveiliging te verwijderen (bijv. door het document opnieuw op te slaan als PDF zonder restricties).
+                </p>
+            </div>
+
+            <div class="faq-item">
+                <h4>Zijn er beperkingen aan bestandsgrootte of resolutie?</h4>
+                <p>
+                    De limiet hangt af van de kracht van uw eigen computer (RAM). Voor de meeste tekstuele rapporten en tabellen is dit geen probleem. Bij extreem zware technische tekeningen (vector-heavy) kan de browser vertragen. Gemiddeld werken bestanden tot 100MB per stuk vloeiend op een standaard Nobleo werkstation.
+                </p>
+            </div>
+
+            <div class="faq-item">
+                <h4>Wat met digitale handtekeningen en papierformaten?</h4>
+                <p>
+                    <strong>Handtekeningen:</strong> Omdat er een nieuw bestand wordt gegenereerd, vervalt de cryptografische geldigheid van bestaande digitale handtekeningen. <br>
+                    <strong>Formaten:</strong> De tool schaalt de pagina's op basis van het eerste document. Voor het beste resultaat gebruikt u documenten met dezelfde oriëntatie (bijv. beide A4 staand).
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; Nobleo Bouw en Infra - <a href="https://www.nobleo-infra.nl" target="_blank">www.nobleo-infra.nl</a>
+    </footer>
 
     <script>
+        // --- Modal Logic ---
+        function toggleModal() {
+            document.getElementById('faqModal').classList.toggle('active');
+        }
+        function closeModal(e) {
+            if (e.target.id === 'faqModal') toggleModal();
+        }
+
         // --- Theme Logic ---
         function setTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
             localStorage.setItem('theme', theme);
-            document.getElementById('themeBtn').innerText = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+            document.getElementById('themeBtn').innerText = theme === 'dark' ? '☀️ Light' : '🌙 Dark';
         }
-
         function toggleTheme() {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             setTheme(currentTheme === 'dark' ? 'light' : 'dark');
         }
-
-        // Initialize based on system preference or saved preference
-        const savedTheme = localStorage.getItem('theme');
-        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        
-        if (savedTheme) {
-            setTheme(savedTheme);
-        } else {
-            setTheme(systemDark ? 'dark' : 'light');
-        }
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        setTheme(savedTheme);
 
         // --- PDF Logic ---
         async function mergePDFs() {
@@ -242,12 +329,13 @@
             const statusEl = document.getElementById('status');
 
             if (!file1 || !file2) {
-                statusEl.innerText = "Selecteer twee PDF documenten.";
+                statusEl.innerText = "⚠️ Selecteer eerst twee PDF documenten.";
                 statusEl.style.color = "#ff6b6b";
                 return;
             }
 
-            statusEl.innerText = "Bezig met genereren...";
+            statusEl.innerText = "⏳ Bezig met genereren van vergelijking...";
+            statusEl.style.color = "var(--text-muted)";
 
             try {
                 const arrayBuffer1 = await file1.arrayBuffer();
@@ -292,19 +380,20 @@
                 const pdfBytes = await mergedPdf.save();
                 const blob = new Blob([pdfBytes], { type: 'application/pdf' });
                 const url = URL.createObjectURL(blob);
-
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'Nobleo_Infra_Vergelijking.pdf';
+                a.download = 'Nobleo_Bouw_Infra_Vergelijking.pdf';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                statusEl.innerText = "✅ Succesvol gedownload.";
+                statusEl.innerText = "✅ Vergelijking succesvol gegenereerd.";
+                statusEl.style.color = "#39d6b2";
             } catch (error) {
                 console.error(error);
-                statusEl.innerText = "Fout bij verwerken.";
+                statusEl.innerText = "❌ Fout bij verwerken. Mogelijk is een PDF beveiligd.";
+                statusEl.style.color = "#ff6b6b";
             }
         }
     </script>
