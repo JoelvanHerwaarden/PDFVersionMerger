@@ -155,7 +155,7 @@
             box-shadow: 0 4px 15px rgba(57, 214, 178, 0.4);
         }
 
-        /* Modal / Elevation Styles */
+        /* Modal Styles */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -210,13 +210,23 @@
 
         footer { 
             margin-top: auto; 
-            padding: 30px; 
+            padding-top: 30px; 
             font-size: 0.85rem; 
             color: var(--text-muted); 
             text-align: center;
         }
         footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
         footer a:hover { text-decoration: underline; }
+
+        .vibe-tag {
+            font-size: 0.75rem;
+            margin-top: 8px;
+            opacity: 0.6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
     </style>
 </head>
 <body>
@@ -260,56 +270,37 @@
             
             <div class="faq-item">
                 <h4>Hoe wordt mijn privacy gewaarborgd?</h4>
-                <p>
-                    Veiligheid is onze prioriteit. In tegenstelling tot online converters worden uw documenten <strong>niet geüpload naar een server</strong>. De volledige verwerking vindt plaats in het tijdelijke geheugen van uw eigen browser. Zodra u het tabblad sluit, zijn alle gegevens gewist. Dit maakt de tool uitermate geschikt voor vertrouwelijke projectstukken.
-                </p>
+                <p>Veiligheid is onze prioriteit. In tegenstelling tot online converters worden uw documenten <strong>niet geüpload naar een server</strong>. De volledige verwerking vindt plaats lokaal in uw eigen browser.</p>
             </div>
 
             <div class="faq-item">
                 <h4>Wat gebeurt er bij een ongelijk aantal pagina's?</h4>
-                <p>
-                    De tool synchroniseert beide documenten op paginanummer. Als Document A 10 pagina's heeft en Document B slechts 8, dan zal de resulterende vergelijking 10 pagina's tellen. Op de laatste twee pagina's blijft de rechterkant (Document B) leeg. Dit zorgt ervoor dat pagina 5 van de referentie altijd naast pagina 5 van de wijziging staat.
-                </p>
+                <p>De tool synchroniseert op paginanummer. Als Document A langer is dan Document B, blijven de ontbrekende pagina's aan de rechterzijde gewoon leeg.</p>
             </div>
 
             <div class="faq-item">
-                <h4>Waarom werkt de tool niet met beveiligde PDF's?</h4>
-                <p>
-                    PDF-beveiliging (zoals versleuteling of restricties op kopiëren) voorkomt dat externe scripts de pagina-inhoud kunnen 'lezen'. Om technische fouten en inbreuk op beveiliging te voorkomen, kunnen deze bestanden niet worden verwerkt. U dient eerst de beveiliging te verwijderen (bijv. door het document opnieuw op te slaan als PDF zonder restricties).
-                </p>
+                <h4>Werkt dit met beveiligde PDF's?</h4>
+                <p>Nee, beveiligde PDF's blokkeren script-toegang. Sla het document eerst op als een 'plat' PDF-bestand zonder restricties.</p>
             </div>
 
             <div class="faq-item">
-                <h4>Zijn er beperkingen aan bestandsgrootte of resolutie?</h4>
-                <p>
-                    De limiet hangt af van de kracht van uw eigen computer (RAM). Voor de meeste tekstuele rapporten en tabellen is dit geen probleem. Bij extreem zware technische tekeningen (vector-heavy) kan de browser vertragen. Gemiddeld werken bestanden tot 100MB per stuk vloeiend op een standaard Nobleo werkstation.
-                </p>
-            </div>
-
-            <div class="faq-item">
-                <h4>Wat met digitale handtekeningen en papierformaten?</h4>
-                <p>
-                    <strong>Handtekeningen:</strong> Omdat er een nieuw bestand wordt gegenereerd, vervalt de cryptografische geldigheid van bestaande digitale handtekeningen. <br>
-                    <strong>Formaten:</strong> De tool schaalt de pagina's op basis van het eerste document. Voor het beste resultaat gebruikt u documenten met dezelfde oriëntatie (bijv. beide A4 staand).
-                </p>
+                <h4>Wat met digitale handtekeningen?</h4>
+                <p>Omdat er een nieuw bestand wordt aangemaakt, blijft de visuele handtekening staan maar vervalt de cryptografische geldigheid ervan.</p>
             </div>
         </div>
     </div>
 
     <footer>
-        &copy; Nobleo Bouw en Infra - <a href="https://www.nobleo-infra.nl" target="_blank">www.nobleo-infra.nl</a>
+        <div>&copy; Nobleo Bouw en Infra - <a href="https://www.nobleo-infra.nl" target="_blank">www.nobleo-infra.nl</a></div>
+        <div class="vibe-tag">
+            <span>🤖</span> Vibe-coded using Gemini
+        </div>
     </footer>
 
     <script>
-        // --- Modal Logic ---
-        function toggleModal() {
-            document.getElementById('faqModal').classList.toggle('active');
-        }
-        function closeModal(e) {
-            if (e.target.id === 'faqModal') toggleModal();
-        }
+        function toggleModal() { document.getElementById('faqModal').classList.toggle('active'); }
+        function closeModal(e) { if (e.target.id === 'faqModal') toggleModal(); }
 
-        // --- Theme Logic ---
         function setTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
             localStorage.setItem('theme', theme);
@@ -322,7 +313,6 @@
         const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         setTheme(savedTheme);
 
-        // --- PDF Logic ---
         async function mergePDFs() {
             const file1 = document.getElementById('pdf1').files[0];
             const file2 = document.getElementById('pdf2').files[0];
@@ -334,7 +324,7 @@
                 return;
             }
 
-            statusEl.innerText = "⏳ Bezig met genereren van vergelijking...";
+            statusEl.innerText = "⏳ Bezig met genereren...";
             statusEl.style.color = "var(--text-muted)";
 
             try {
@@ -388,11 +378,11 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                statusEl.innerText = "✅ Vergelijking succesvol gegenereerd.";
+                statusEl.innerText = "✅ Succesvol gegenereerd.";
                 statusEl.style.color = "#39d6b2";
             } catch (error) {
                 console.error(error);
-                statusEl.innerText = "❌ Fout bij verwerken. Mogelijk is een PDF beveiligd.";
+                statusEl.innerText = "❌ Fout bij verwerken.";
                 statusEl.style.color = "#ff6b6b";
             }
         }
