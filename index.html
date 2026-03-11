@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCIA PDF Vergelijker</title>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            max-width: 800px; 
+            margin: 3rem auto; 
+            padding: 2rem; 
+            background-color: #f4f7f6; 
+            color: #333;
+        }
+        .container { 
+            background: #ffffff; 
+            padding: 2.5rem; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 16px rgba(0,0,0,0.05); 
+        }
+        h2 { margin-top: 0; color: #0056b3; }
+        p { margin-bottom: 2rem; line-height: 1.6; color: #555; }
+        .form-group { 
+            margin-bottom: 1.5rem; 
+            background: #f9fbfc;
+            padding: 1rem;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+        }
+        label { 
+            display: block; 
+            font-weight: 600; 
+            margin-bottom: 0.5rem; 
+        }
+        input[type="file"] { 
+            display: block; 
+            width: 100%; 
+            font-size: 1rem;
+        }
+        button { 
+            background: #0056b3; 
+            color: white; 
+            border: none; 
+            padding: 1rem 2rem; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 1.1rem; 
+            font-weight: bold;
+            width: 100%;
+            transition: background 0.3s ease;
+        }
+        button:hover { background: #004494; }
+        #status { 
+            margin-top: 1.5rem; 
+            font-weight: bold; 
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🏗️ SCIA PDF Vergelijker</h2>
+        <p>Voeg twee (bijna) identieke PDF-rapporten samen tot één landscape document. Ideaal voor Site-engineering om UO's of stijfheden (laag/hoog) direct naast elkaar te vergelijken, zonder meerdere bijlages aan te hoeven maken.</p>
+
+        <div class="form-group">
+            <label for="pdf1">Document 1 (Links - bijv. Oorspronkelijk UO):</label>
+            <input type="file" id="pdf1" accept="application/pdf">
+        </div>
+
+        <div class="form-group">
+            <label for="pdf2">Document 2 (Rechts - bijv. Wijziging):</label>
+            <input type="file" id="pdf2" accept="application/pdf">
+        </div>
+
+        <button onclick="mergePDFs()">Samenvoegen tot Landscape PDF</button>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        async function mergePDFs() {
+            const file1 = document.getElementById('pdf1').files[0];
+            const file2 = document.getElementById('pdf2').files[0];
+            const statusEl = document.getElementById('status');
+
+            if (!file1 || !file2) {
+                statusEl.style.color = '#d9534f';
+                statusEl.innerText = "Selecteer a.u.b. twee PDF bestanden.";
+                return;
+            }
+
+            statusEl.style.color = '#333';
+            statusEl.innerText = "Bezig met genereren... Even geduld.";
+
+            try {
+                // Lees de bestanden in als ArrayBuffers
+                const arrayBuffer1 = await file1.arrayBuffer();
+                const arrayBuffer2 = await file2.arrayBuffer();
+
+                const { PDFDocument } = PDFLib;
+
+                // Laad de PDF's in
+                const pdfDoc1 = await PDFDocument.load(arrayBuffer1);
+                const pdfDoc2 = await PDFDocument.load(arrayBuffer2);
+                
+                // Maak een nieuw, leeg document aan voor de output
+                const mergedPdf = await PDFDocument.create();
+
+                // Bepaal de maximale lengte (stel de ene PDF heeft 5 pagina's en de andere 6)
+                const maxPages = Math.max(pdfDoc1.getPageCount(), pdfDoc2.getPageCount());
+
+                for (let i = 0; i < maxPages; i++) {
+                    let width = 595.28; // Standaard A4 breedte
+                    let height = 841.89; // Standaard A4 hoogte
+                    let page1 = null;
+                    let page2 = null;
+
+                    // Pak de huidige pagina van PDF 1 (als deze bestaat)
+                    if (i < pdfDoc1.getPageCount()) {
+                        page1 = pdfDoc1.getPage(i);
+                        width = page1.getWidth();
+                        height = page1.getHeight();
+                    } 
+                    // Of pak de afmetingen van PDF 2 als referentie
+                    else if (i < pdfDoc2.getPageCount()) {
+                        page2 = pdfDoc2.getPage(i);
+                        width = page2.getWidth();
+                        height = page2.getHeight();
+                    }
+
+                    // Maak een nieuwe pagina aan die 2x de breedte is (Landscape)
+                    const newPage = mergedPdf.addPage([width * 2, height]);
+
+                    // Embed en teken de linker pagina
+                    if (page1) {
+                        const embeddedPage1 = await mergedPdf.embedPage(page1);
+                        newPage.drawPage(embeddedPage1, { x: 0, y: 0 });
+                    }
+
+                    // Embed en teken de rechter pagina (met een 'x' offset ter grootte van 1 pagina)
+                    if (i < pdfDoc2.getPageCount()) {
+                        page2 = pdfDoc2.getPage(i);
+                        const embeddedPage2 = await mergedPdf.embedPage(page2);
+                        newPage.drawPage(embeddedPage2, { x: width, y: 0 });
+                    }
+                }
+
+                // Sla de samengevoegde PDF op en trigger een download
+                const pdfBytes = await mergedPdf.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'SCIA_Vergelijking_Landscape.pdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                statusEl.style.color = '#5cb85c';
+                statusEl.innerText = "✅ Klaar! De PDF wordt nu gedownload.";
+
+            } catch (error) {
+                console.error(error);
+                statusEl.style.color = '#d9534f';
+                statusEl.innerText = "Er is een fout opgetreden bij het verwerken. Het bestand is mogelijk beveiligd.";
+            }
+        }
+    </script>
+</body>
+</html>
