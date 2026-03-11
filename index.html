@@ -3,81 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCIA PDF Vergelijker</title>
+    <title>Nobleo Infra | PDF Vergelijker</title>
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <style>
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
         body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            max-width: 800px; 
-            margin: 3rem auto; 
-            padding: 2rem; 
-            background-color: #f4f7f6; 
-            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #ffffff; 
+            color: #004268;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
         }
+
+        .logo {
+            max-width: 220px;
+            height: auto;
+            margin-bottom: 40px;
+        }
+
         .container { 
-            background: #ffffff; 
-            padding: 2.5rem; 
-            border-radius: 12px; 
-            box-shadow: 0 8px 16px rgba(0,0,0,0.05); 
+            width: 100%;
+            max-width: 650px; 
+            text-align: center;
         }
-        h2 { margin-top: 0; color: #0056b3; }
-        p { margin-bottom: 2rem; line-height: 1.6; color: #555; }
+
+        h2 { 
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #0077bc; 
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .description-box {
+            text-align: left;
+            background: #fbfbfd;
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            border: 1px solid #e5e5e7;
+        }
+
+        .description-box h3 {
+            margin-top: 0;
+            font-size: 1.1rem;
+            color: #0077bc;
+        }
+
+        .description-box p {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 0;
+            opacity: 0.9;
+        }
+
+        .form-card {
+            background: #ffffff;
+            padding: 2rem;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0, 66, 104, 0.08);
+            border: 1px solid #f0f0f2;
+            margin-bottom: 2rem;
+        }
+
         .form-group { 
             margin-bottom: 1.5rem; 
-            background: #f9fbfc;
-            padding: 1rem;
-            border: 1px solid #e1e8ed;
-            border-radius: 8px;
+            text-align: left;
         }
+
         label { 
             display: block; 
-            font-weight: 600; 
-            margin-bottom: 0.5rem; 
+            font-size: 0.8rem;
+            font-weight: 700; 
+            margin-bottom: 8px; 
+            text-transform: uppercase;
+            color: #0077bc;
+            letter-spacing: 0.03em;
         }
+
         input[type="file"] { 
-            display: block; 
             width: 100%; 
-            font-size: 1rem;
+            padding: 12px;
+            background: #f5f5f7;
+            border-radius: 12px;
+            border: 2px dashed #d2d2d7;
+            cursor: pointer;
         }
+
         button { 
-            background: #0056b3; 
-            color: white; 
+            background: #39d6b2; 
+            color: #ffffff; 
             border: none; 
-            padding: 1rem 2rem; 
-            border-radius: 6px; 
+            padding: 1.1rem 3rem; 
+            border-radius: 14px; 
             cursor: pointer; 
             font-size: 1.1rem; 
-            font-weight: bold;
+            font-weight: 600;
             width: 100%;
-            transition: background 0.3s ease;
+            transition: all 0.2s ease;
         }
-        button:hover { background: #004494; }
+
+        button:hover { 
+            background: #32c2a1;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(57, 214, 178, 0.3);
+        }
+
+        button:active { transform: translateY(0); }
+
         #status { 
             margin-top: 1.5rem; 
-            font-weight: bold; 
-            text-align: center;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 20px;
+            font-size: 0.8rem;
+            opacity: 0.6;
         }
     </style>
 </head>
 <body>
+
+    <img src="https://www.nobleo-infra.nl/wp-content/uploads/2025/02/Nobleo_BI_Logo_RGB.png.webp" alt="Nobleo Infra Logo" class="logo">
+
     <div class="container">
-        <h2>🏗️ SCIA PDF Vergelijker</h2>
-        <p>Voeg twee (bijna) identieke PDF-rapporten samen tot één landscape document. Ideaal voor Site-engineering om UO's of stijfheden (laag/hoog) direct naast elkaar te vergelijken, zonder meerdere bijlages aan te hoeven maken.</p>
+        <h2>Document Vergelijker</h2>
 
-        <div class="form-group">
-            <label for="pdf1">Document 1 (Links - bijv. Oorspronkelijk UO):</label>
-            <input type="file" id="pdf1" accept="application/pdf">
+        <div class="description-box">
+            <h3>Wat doet deze tool?</h3>
+            <p>
+                Deze applicatie is ontworpen om twee afzonderlijke PDF-rapporten (zoals SCIA-outputs, berekeningen of revisies) samen te voegen tot één overzichtelijk document. 
+                De pagina's worden zij-aan-zij in <strong>Landscape</strong> formaat geplaatst. Hierdoor kun je direct visuele verschillen in stijfheden, krachten of geometrie analyseren zonder te hoeven schakelen tussen verschillende bestanden of bijlages.
+            </p>
         </div>
 
-        <div class="form-group">
-            <label for="pdf2">Document 2 (Rechts - bijv. Wijziging):</label>
-            <input type="file" id="pdf2" accept="application/pdf">
+        <div class="form-card">
+            <div class="form-group">
+                <label for="pdf1">Referentie Document (Links)</label>
+                <input type="file" id="pdf1" accept="application/pdf">
+            </div>
+
+            <div class="form-group">
+                <label for="pdf2">Wijziging / Variant (Rechts)</label>
+                <input type="file" id="pdf2" accept="application/pdf">
+            </div>
+
+            <button onclick="mergePDFs()">Genereer Vergelijking</button>
+            <div id="status"></div>
         </div>
-
-        <button onclick="mergePDFs()">Samenvoegen tot Landscape PDF</button>
-
-        <div id="status"></div>
     </div>
+
+    <footer>&copy; Nobleo Infra - Professional Engineering Solutions</footer>
 
     <script>
         async function mergePDFs() {
@@ -86,87 +173,73 @@
             const statusEl = document.getElementById('status');
 
             if (!file1 || !file2) {
-                statusEl.style.color = '#d9534f';
-                statusEl.innerText = "Selecteer a.u.b. twee PDF bestanden.";
+                statusEl.style.color = '#e03e2d';
+                statusEl.innerText = "Selecteer twee PDF documenten om door te gaan.";
                 return;
             }
 
-            statusEl.style.color = '#333';
-            statusEl.innerText = "Bezig met genereren... Even geduld.";
+            statusEl.style.color = '#004268';
+            statusEl.innerText = "Documenten worden verwerkt...";
 
             try {
-                // Lees de bestanden in als ArrayBuffers
                 const arrayBuffer1 = await file1.arrayBuffer();
                 const arrayBuffer2 = await file2.arrayBuffer();
-
                 const { PDFDocument } = PDFLib;
 
-                // Laad de PDF's in
                 const pdfDoc1 = await PDFDocument.load(arrayBuffer1);
                 const pdfDoc2 = await PDFDocument.load(arrayBuffer2);
-                
-                // Maak een nieuw, leeg document aan voor de output
                 const mergedPdf = await PDFDocument.create();
 
-                // Bepaal de maximale lengte (stel de ene PDF heeft 5 pagina's en de andere 6)
                 const maxPages = Math.max(pdfDoc1.getPageCount(), pdfDoc2.getPageCount());
 
                 for (let i = 0; i < maxPages; i++) {
-                    let width = 595.28; // Standaard A4 breedte
-                    let height = 841.89; // Standaard A4 hoogte
+                    let width = 595.28;
+                    let height = 841.89;
                     let page1 = null;
-                    let page2 = null;
 
-                    // Pak de huidige pagina van PDF 1 (als deze bestaat)
                     if (i < pdfDoc1.getPageCount()) {
                         page1 = pdfDoc1.getPage(i);
                         width = page1.getWidth();
                         height = page1.getHeight();
-                    } 
-                    // Of pak de afmetingen van PDF 2 als referentie
-                    else if (i < pdfDoc2.getPageCount()) {
-                        page2 = pdfDoc2.getPage(i);
-                        width = page2.getWidth();
-                        height = page2.getHeight();
+                    } else if (i < pdfDoc2.getPageCount()) {
+                        let tempPage = pdfDoc2.getPage(i);
+                        width = tempPage.getWidth();
+                        height = tempPage.getHeight();
                     }
 
-                    // Maak een nieuwe pagina aan die 2x de breedte is (Landscape)
                     const newPage = mergedPdf.addPage([width * 2, height]);
 
-                    // Embed en teken de linker pagina
                     if (page1) {
                         const embeddedPage1 = await mergedPdf.embedPage(page1);
                         newPage.drawPage(embeddedPage1, { x: 0, y: 0 });
                     }
 
-                    // Embed en teken de rechter pagina (met een 'x' offset ter grootte van 1 pagina)
                     if (i < pdfDoc2.getPageCount()) {
-                        page2 = pdfDoc2.getPage(i);
+                        const page2 = pdfDoc2.getPage(i);
                         const embeddedPage2 = await mergedPdf.embedPage(page2);
                         newPage.drawPage(embeddedPage2, { x: width, y: 0 });
                     }
                 }
 
-                // Sla de samengevoegde PDF op en trigger een download
                 const pdfBytes = await mergedPdf.save();
                 const blob = new Blob([pdfBytes], { type: 'application/pdf' });
                 const url = URL.createObjectURL(blob);
 
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'SCIA_Vergelijking_Landscape.pdf';
+                a.download = 'Nobleo_Infra_Vergelijking.pdf';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                statusEl.style.color = '#5cb85c';
-                statusEl.innerText = "✅ Klaar! De PDF wordt nu gedownload.";
+                statusEl.style.color = '#39d6b2';
+                statusEl.innerText = "✅ De vergelijking is succesvol gegenereerd.";
 
             } catch (error) {
                 console.error(error);
-                statusEl.style.color = '#d9534f';
-                statusEl.innerText = "Er is een fout opgetreden bij het verwerken. Het bestand is mogelijk beveiligd.";
+                statusEl.style.color = '#e03e2d';
+                statusEl.innerText = "Fout bij verwerken. Controleer of de PDF's niet beveiligd zijn.";
             }
         }
     </script>
