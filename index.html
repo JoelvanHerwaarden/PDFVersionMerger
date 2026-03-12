@@ -63,7 +63,7 @@
         }
 
         .logo { max-width: 220px; height: auto; margin-bottom: 40px; filter: var(--logo-filter); }
-        .container { width: 100%; max-width: 650px; text-align: center; transition: max-width 0.4s ease; }
+        .container { width: 100%; max-width: 650px; text-align: center; transition: max-width 0.4s ease-in-out; }
         .container.full-width { max-width: 95vw; }
 
         h2 { font-size: 2.2rem; font-weight: 700; color: var(--accent); margin-bottom: 1.5rem; letter-spacing: -0.02em; }
@@ -183,15 +183,12 @@
 
             <div class="nav-controls">
                 <button class="btn-small" onclick="changePage(-1)" id="prevBtn">⬅️ Vorige</button>
-                
                 <div class="page-jump-container">
                     <span>Pagina</span>
                     <input type="number" id="pageInput" class="page-input" min="1" value="1" onchange="jumpToPage()">
                     <span id="totalPagesLabel">van 1</span>
                 </div>
-
                 <button class="btn-small" onclick="changePage(1)" id="nextBtn">Volgende ➡️</button>
-                
                 <button class="btn-small" id="fullWidthBtn" onclick="toggleFullWidth()">↔️ Paginabreedte</button>
             </div>
 
@@ -207,14 +204,32 @@
     <div class="modal-overlay" id="faqModal" onclick="if(event.target == this) toggleModal()">
         <div class="modal-content">
             <h2 style="color: var(--accent); margin-top: 0;">Info & FAQ</h2>
+            
             <div class="faq-item">
-                <strong>Paginabreedte?</strong>
-                <p>Gebruik de "↔️ Paginabreedte" knop om de vergelijker over de hele breedte van je scherm uit te rekken voor meer detail.</p>
+                <strong>Is dit veilig voor vertrouwelijke data?</strong>
+                <p>Ja. De applicatie gebruikt lokale webtools (PDF.js en PDF-Lib). Uw documenten worden nooit geüpload naar een server; alle verwerking vindt plaats in het tijdelijke geheugen van uw eigen browser.</p>
             </div>
+
             <div class="faq-item">
-                <strong>Is dit veilig?</strong>
-                <p>Ja. Alle verwerking vindt lokaal plaats in uw browser.</p>
+                <strong>Hoe werkt de vergelijker?</strong>
+                <p>U kunt met de slider op elke pagina visueel zoeken naar verschillen. Gebruik de "Vorige" en "Volgende" knoppen om door het document te bladeren. Gebruik de "Paginabreedte" knop om het beeld schermvullend te maken.</p>
             </div>
+
+            <div class="faq-item">
+                <strong>Wat gebeurt er als documenten niet even lang zijn?</strong>
+                <p>De tool bepaalt het totaal aantal pagina's op basis van het langste document. De kortere PDF zal op de extra pagina's als een witvlak (leeg) worden weergegeven.</p>
+            </div>
+
+            <div class="faq-item">
+                <strong>Werkt de download voor alle pagina's?</strong>
+                <p>Ja. De "Download" knop genereert een nieuw PDF-bestand waarin alle pagina's van beide documenten zij-aan-zij in landscape-formaat zijn geplaatst.</p>
+            </div>
+
+            <div class="faq-item">
+                <strong>Source Code & Ontwikkeling?</strong>
+                <p>Dit project is open-source ontwikkeld. Bezoek de GitHub repository (link rechtsboven) voor de broncode of om bij te dragen aan de ontwikkeling.</p>
+            </div>
+
             <button class="btn-small" onclick="toggleModal()" style="width: 100%; margin-top: 1rem;">Sluiten</button>
         </div>
     </div>
@@ -334,7 +349,7 @@
             if (pageNum > pdfDoc.numPages) return null; 
 
             const page = await pdfDoc.getPage(pageNum);
-            const viewport = page.getViewport({ scale: 2.5 }); // High resolution for full width
+            const viewport = page.getViewport({ scale: 2.5 }); 
             canvas.height = viewport.height;
             canvas.width = viewport.width;
             await page.render({ canvasContext: context, viewport: viewport }).promise;
