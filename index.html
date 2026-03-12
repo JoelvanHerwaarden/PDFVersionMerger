@@ -63,7 +63,9 @@
         }
 
         .logo { max-width: 220px; height: auto; margin-bottom: 40px; filter: var(--logo-filter); }
-        .container { width: 100%; max-width: 650px; text-align: center; }
+        .container { width: 100%; max-width: 650px; text-align: center; transition: max-width 0.4s ease; }
+        .container.full-width { max-width: 95vw; }
+
         h2 { font-size: 2.2rem; font-weight: 700; color: var(--accent); margin-bottom: 1.5rem; letter-spacing: -0.02em; }
 
         .description-box {
@@ -93,6 +95,7 @@
             display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 1rem; background: var(--container-bg); padding: 10px 20px;
             border-radius: 15px; border: 1px solid var(--border-color);
+            flex-wrap: wrap; gap: 10px;
         }
 
         .page-jump-container { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: bold; }
@@ -102,7 +105,7 @@
         }
 
         .comparison-container {
-            position: relative; width: 100%; aspect-ratio: 1 / 1.41; 
+            position: relative; width: 100%; 
             border-radius: 20px; overflow: hidden; border: 1px solid var(--border-color);
             background: #fff; box-shadow: 0 10px 30px var(--shadow);
         }
@@ -136,6 +139,8 @@
         footer { margin-top: auto; padding-top: 30px; font-size: 0.85rem; color: var(--text-muted); text-align: center; }
         footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
         footer a:hover { text-decoration: underline; }
+
+        .active-toggle { background: var(--button-bg) !important; color: var(--button-text) !important; border-color: var(--button-bg) !important; }
     </style>
 </head>
 <body>
@@ -150,9 +155,8 @@
 
     <img src="https://www.nobleo-infra.nl/wp-content/uploads/2025/02/Nobleo_BI_Logo_RGB.png.webp" alt="Logo" class="logo">
 
-    <div class="container">
+    <div class="container" id="mainContainer">
         <h2>Document Vergelijker</h2>
-
         <div class="description-box">
             <p style="margin: 0; color: var(--text-muted); line-height: 1.5;">
                 Selecteer twee PDF-rapporten om deze <strong>interactief</strong> te vergelijken en zij-aan-zij samen te voegen.
@@ -179,15 +183,19 @@
 
             <div class="nav-controls">
                 <button class="btn-small" onclick="changePage(-1)" id="prevBtn">⬅️ Vorige</button>
+                
                 <div class="page-jump-container">
                     <span>Pagina</span>
                     <input type="number" id="pageInput" class="page-input" min="1" value="1" onchange="jumpToPage()">
                     <span id="totalPagesLabel">van 1</span>
                 </div>
+
                 <button class="btn-small" onclick="changePage(1)" id="nextBtn">Volgende ➡️</button>
+                
+                <button class="btn-small" id="fullWidthBtn" onclick="toggleFullWidth()">↔️ Paginabreedte</button>
             </div>
 
-            <div class="comparison-container">
+            <div class="comparison-container" id="compContainer">
                 <canvas id="canvas-left" class="pdf-canvas"></canvas>
                 <canvas id="canvas-right" class="pdf-canvas"></canvas>
                 <div id="divider" class="divider-line"></div>
@@ -199,32 +207,14 @@
     <div class="modal-overlay" id="faqModal" onclick="if(event.target == this) toggleModal()">
         <div class="modal-content">
             <h2 style="color: var(--accent); margin-top: 0;">Info & FAQ</h2>
-            
             <div class="faq-item">
-                <strong>Is dit veilig voor vertrouwelijke data?</strong>
-                <p>Ja. De applicatie gebruikt lokale webtools (PDF.js en PDF-Lib). Uw documenten worden nooit geüpload naar een server; alle verwerking vindt plaats in het tijdelijke geheugen van uw eigen browser.</p>
+                <strong>Paginabreedte?</strong>
+                <p>Gebruik de "↔️ Paginabreedte" knop om de vergelijker over de hele breedte van je scherm uit te rekken voor meer detail.</p>
             </div>
-
             <div class="faq-item">
-                <strong>Hoe werkt de vergelijker?</strong>
-                <p>U kunt met de slider op elke pagina visueel zoeken naar verschillen. Gebruik de "Vorige" en "Volgende" knoppen om door het document te bladeren. U kunt ook direct een paginanummer typen om te springen.</p>
+                <strong>Is dit veilig?</strong>
+                <p>Ja. Alle verwerking vindt lokaal plaats in uw browser.</p>
             </div>
-
-            <div class="faq-item">
-                <strong>Wat gebeurt er als documenten niet even lang zijn?</strong>
-                <p>De tool bepaalt het totaal aantal pagina's op basis van het langste document. De kortere PDF zal op de extra pagina's als een witvlak (leeg) worden weergegeven in zowel de preview als de download.</p>
-            </div>
-
-            <div class="faq-item">
-                <strong>Werkt de download voor alle pagina's?</strong>
-                <p>Ja. De "Download" knop genereert een nieuw PDF-bestand waarin alle pagina's van beide documenten zij-aan-zij in landscape-formaat zijn geplaatst voor een definitief overzicht.</p>
-            </div>
-
-            <div class="faq-item">
-                <strong>Source Code & Ontwikkeling?</strong>
-                <p>Dit project is open-source ontwikkeld. Bezoek de GitHub repository (link rechtsboven) voor de broncode of om bij te dragen aan de ontwikkeling.</p>
-            </div>
-
             <button class="btn-small" onclick="toggleModal()" style="width: 100%; margin-top: 1rem;">Sluiten</button>
         </div>
     </div>
@@ -239,6 +229,7 @@
         let pdfDoc1, pdfDoc2, file1Blob, file2Blob;
         let currentPage = 1;
         let totalPages = 1;
+        let isFullWidth = false;
 
         function toggleModal() { document.getElementById('faqModal').classList.toggle('active'); }
         
@@ -249,6 +240,19 @@
         }
         function toggleTheme() { setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
         setTheme(localStorage.getItem('theme') || 'light');
+
+        function toggleFullWidth() {
+            isFullWidth = !isFullWidth;
+            const container = document.getElementById('mainContainer');
+            const btn = document.getElementById('fullWidthBtn');
+            if (isFullWidth) {
+                container.classList.add('full-width');
+                btn.classList.add('active-toggle');
+            } else {
+                container.classList.remove('full-width');
+                btn.classList.remove('active-toggle');
+            }
+        }
 
         document.getElementById('compSlider').addEventListener('input', (e) => {
             const val = e.target.value;
@@ -282,8 +286,6 @@
                 document.getElementById('previewSection').style.display = 'block';
                 statusEl.innerText = "✅ Geladen.";
                 statusEl.style.color = "#39d6b2";
-                
-                window.scrollTo({ top: document.getElementById('previewSection').offsetTop - 50, behavior: 'smooth' });
             } catch (error) {
                 statusEl.innerText = "❌ Fout bij inladen.";
             }
@@ -312,22 +314,31 @@
             document.getElementById('prevBtn').disabled = currentPage === 1;
             document.getElementById('nextBtn').disabled = currentPage === totalPages;
 
-            await Promise.all([
+            const [v1, v2] = await Promise.all([
                 renderSingleCanvas(pdfDoc1, currentPage, 'canvas-left'),
                 renderSingleCanvas(pdfDoc2, currentPage, 'canvas-right')
             ]);
+
+            const activeViewport = v1 || v2;
+            if (activeViewport) {
+                const ratio = activeViewport.width / activeViewport.height;
+                document.getElementById('compContainer').style.aspectRatio = `${ratio}`;
+            }
         }
 
         async function renderSingleCanvas(pdfDoc, pageNum, canvasId) {
             const canvas = document.getElementById(canvasId);
             const context = canvas.getContext('2d');
             context.clearRect(0, 0, canvas.width, canvas.height);
-            if (pageNum > pdfDoc.numPages) return; 
+            
+            if (pageNum > pdfDoc.numPages) return null; 
+
             const page = await pdfDoc.getPage(pageNum);
-            const viewport = page.getViewport({ scale: 2 });
+            const viewport = page.getViewport({ scale: 2.5 }); // High resolution for full width
             canvas.height = viewport.height;
             canvas.width = viewport.width;
             await page.render({ canvasContext: context, viewport: viewport }).promise;
+            return viewport;
         }
 
         async function downloadLandscapePDF() {
