@@ -21,6 +21,7 @@
             --logo-filter: none;
             --shadow: rgba(0, 66, 104, 0.08);
             --modal-overlay: rgba(0, 43, 69, 0.85);
+            --github-filter: invert(18%) sepia(35%) therapeutic(100%) saturate(1200%) hue-rotate(180deg); /* Dark Blue */
         }
 
         [data-theme="dark"] {
@@ -36,6 +37,7 @@
             --logo-filter: brightness(0) invert(1);
             --shadow: rgba(0, 0, 0, 0.3);
             --modal-overlay: rgba(0, 0, 0, 0.7);
+            --github-filter: invert(1); /* White */
         }
 
         * { box-sizing: border-box; -webkit-font-smoothing: antialiased; transition: background-color 0.3s ease, color 0.3s ease; }
@@ -46,7 +48,14 @@
             margin: 0; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh;
         }
 
-        .header-controls { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; }
+        .header-controls { position: absolute; top: 20px; right: 20px; display: flex; gap: 12px; align-items: center; }
+        
+        .github-link {
+            display: flex; align-items: center; text-decoration: none; opacity: 0.8; transition: opacity 0.2s;
+        }
+        .github-link:hover { opacity: 1; }
+        .github-icon { width: 24px; height: 24px; filter: var(--github-filter); }
+
         .btn-small {
             background: var(--container-bg); border: 1px solid var(--border-color);
             color: var(--text-main); padding: 8px 16px; border-radius: 20px;
@@ -111,7 +120,6 @@
             pointer-events: none; box-shadow: 0 0 10px rgba(0,0,0,0.3);
         }
 
-        /* Modal Styles */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--modal-overlay); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(8px);
@@ -133,6 +141,9 @@
 <body>
 
     <div class="header-controls">
+        <a href="https://github.com/JoelvanHerwaarden/PDFVersionMerger" target="_blank" class="github-link" title="Source Code">
+            <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" alt="GitHub" class="github-icon">
+        </a>
         <button class="btn-small" onclick="toggleModal()">💡 Info & FAQ</button>
         <button class="btn-small" onclick="toggleTheme()" id="themeBtn">Mode</button>
     </div>
@@ -190,17 +201,14 @@
     <div class="modal-overlay" id="faqModal" onclick="if(event.target == this) toggleModal()">
         <div class="modal-content">
             <h2 style="color: var(--accent); margin-top: 0;">Info & FAQ</h2>
-            
             <div class="faq-item">
-                <strong>Is dit veilig voor vertrouwelijke data?</strong>
-                <p>Ja. Alles gebeurt lokaal in uw browser. Documenten worden nooit naar een server gestuurd.</p>
+                <strong>Veiligheid?</strong>
+                <p>Uw documenten worden niet naar een server gestuurd. Alles vindt lokaal plaats in uw browser.</p>
             </div>
-
             <div class="faq-item">
-                <strong>Wat gebeurt er als documenten niet even lang zijn?</strong>
-                <p>De kortere PDF zal op de extra pagina's als een witvlak (leeg) worden weergegeven.</p>
+                <strong>Source Code?</strong>
+                <p>Dit project is open-source. Bezoek de GitHub via de link rechtsboven voor meer informatie.</p>
             </div>
-
             <button class="btn-small" onclick="toggleModal()" style="width: 100%; margin-top: 1rem;">Sluiten</button>
         </div>
     </div>
@@ -268,10 +276,8 @@
         async function jumpToPage() {
             const input = document.getElementById('pageInput');
             let val = parseInt(input.value);
-            if (isNaN(val)) return;
-            if (val < 1) val = 1;
+            if (isNaN(val) || val < 1) val = 1;
             if (val > totalPages) val = totalPages;
-            
             currentPage = val;
             input.value = val;
             await renderCurrentPage();
@@ -300,9 +306,7 @@
             const canvas = document.getElementById(canvasId);
             const context = canvas.getContext('2d');
             context.clearRect(0, 0, canvas.width, canvas.height);
-            
             if (pageNum > pdfDoc.numPages) return; 
-
             const page = await pdfDoc.getPage(pageNum);
             const viewport = page.getViewport({ scale: 2 });
             canvas.height = viewport.height;
