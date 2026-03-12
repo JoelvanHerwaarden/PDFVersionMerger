@@ -21,7 +21,7 @@
             --logo-filter: none;
             --shadow: rgba(0, 66, 104, 0.08);
             --modal-overlay: rgba(0, 43, 69, 0.85);
-            --github-filter: invert(18%) sepia(35%) therapeutic(100%) saturate(1200%) hue-rotate(180deg); /* Dark Blue */
+            --github-filter: invert(18%) sepia(35%) therapeutic(100%) saturate(1200%) hue-rotate(180deg);
         }
 
         [data-theme="dark"] {
@@ -37,7 +37,7 @@
             --logo-filter: brightness(0) invert(1);
             --shadow: rgba(0, 0, 0, 0.3);
             --modal-overlay: rgba(0, 0, 0, 0.7);
-            --github-filter: invert(1); /* White */
+            --github-filter: invert(1);
         }
 
         * { box-sizing: border-box; -webkit-font-smoothing: antialiased; transition: background-color 0.3s ease, color 0.3s ease; }
@@ -179,13 +179,11 @@
 
             <div class="nav-controls">
                 <button class="btn-small" onclick="changePage(-1)" id="prevBtn">⬅️ Vorige</button>
-                
                 <div class="page-jump-container">
                     <span>Pagina</span>
                     <input type="number" id="pageInput" class="page-input" min="1" value="1" onchange="jumpToPage()">
                     <span id="totalPagesLabel">van 1</span>
                 </div>
-
                 <button class="btn-small" onclick="changePage(1)" id="nextBtn">Volgende ➡️</button>
             </div>
 
@@ -201,14 +199,32 @@
     <div class="modal-overlay" id="faqModal" onclick="if(event.target == this) toggleModal()">
         <div class="modal-content">
             <h2 style="color: var(--accent); margin-top: 0;">Info & FAQ</h2>
+            
             <div class="faq-item">
-                <strong>Veiligheid?</strong>
-                <p>Uw documenten worden niet naar een server gestuurd. Alles vindt lokaal plaats in uw browser.</p>
+                <strong>Is dit veilig voor vertrouwelijke data?</strong>
+                <p>Ja. De applicatie gebruikt lokale webtools (PDF.js en PDF-Lib). Uw documenten worden nooit geüpload naar een server; alle verwerking vindt plaats in het tijdelijke geheugen van uw eigen browser.</p>
             </div>
+
             <div class="faq-item">
-                <strong>Source Code?</strong>
-                <p>Dit project is open-source. Bezoek de GitHub via de link rechtsboven voor meer informatie.</p>
+                <strong>Hoe werkt de vergelijker?</strong>
+                <p>U kunt met de slider op elke pagina visueel zoeken naar verschillen. Gebruik de "Vorige" en "Volgende" knoppen om door het document te bladeren. U kunt ook direct een paginanummer typen om te springen.</p>
             </div>
+
+            <div class="faq-item">
+                <strong>Wat gebeurt er als documenten niet even lang zijn?</strong>
+                <p>De tool bepaalt het totaal aantal pagina's op basis van het langste document. De kortere PDF zal op de extra pagina's als een witvlak (leeg) worden weergegeven in zowel de preview als de download.</p>
+            </div>
+
+            <div class="faq-item">
+                <strong>Werkt de download voor alle pagina's?</strong>
+                <p>Ja. De "Download" knop genereert een nieuw PDF-bestand waarin alle pagina's van beide documenten zij-aan-zij in landscape-formaat zijn geplaatst voor een definitief overzicht.</p>
+            </div>
+
+            <div class="faq-item">
+                <strong>Source Code & Ontwikkeling?</strong>
+                <p>Dit project is open-source ontwikkeld. Bezoek de GitHub repository (link rechtsboven) voor de broncode of om bij te dragen aan de ontwikkeling.</p>
+            </div>
+
             <button class="btn-small" onclick="toggleModal()" style="width: 100%; margin-top: 1rem;">Sluiten</button>
         </div>
     </div>
