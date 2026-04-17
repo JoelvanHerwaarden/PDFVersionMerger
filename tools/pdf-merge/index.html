@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nobleo | PDF Samenvoegen</title>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <link rel="stylesheet" href="../../shared/style.css">
+    <style>
+        .upload-zone {
+            background: var(--container-bg);
+            border: 2px dashed var(--border-color);
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+        .upload-zone:hover, .upload-zone.drag-active {
+            border-color: var(--button-bg);
+            background: var(--card-bg);
+        }
+        .upload-zone input[type="file"] {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; border: none; padding: 0;
+        }
+        .upload-zone-icon { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; }
+        .upload-zone-label { font-size: 1rem; font-weight: 600; color: var(--text-main); display: block; margin-bottom: 0.25rem; }
+        .upload-zone-sub { font-size: 0.8rem; color: var(--text-muted); }
+
+        .file-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+
+        .file-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: border-color 0.2s, opacity 0.2s, transform 0.15s;
+            cursor: default;
+        }
+        .file-card.dragging { opacity: 0.35; transform: scale(0.98); }
+        .file-card.drag-over { border-color: var(--button-bg); background: var(--container-bg); }
+
+        .drag-handle {
+            font-size: 1.2rem; color: var(--text-muted); cursor: grab; flex-shrink: 0;
+            user-select: none; padding: 4px;
+        }
+        .drag-handle:active { cursor: grabbing; }
+
+        .thumb-wrap {
+            width: 48px; flex-shrink: 0;
+            border-radius: 6px; overflow: hidden;
+            background: #f0f0f0;
+            border: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: center;
+            min-height: 60px;
+        }
+        .thumb-wrap canvas { width: 48px; height: auto; display: block; }
+        .thumb-loading { font-size: 1.2rem; }
+
+        .file-info { flex: 1; min-width: 0; text-align: left; }
+        .file-name {
+            font-size: 0.88rem; font-weight: 600; color: var(--text-main);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;
+        }
+        .file-pages { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; display: block; }
+
+        .file-order-badge {
+            font-size: 0.75rem; font-weight: 700; color: var(--button-text);
+            background: var(--button-bg); border-radius: 50%;
+            width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .remove-btn {
+            background: none; border: none; color: var(--text-muted); cursor: pointer;
+            font-size: 1.1rem; padding: 4px 6px; border-radius: 8px; flex-shrink: 0;
+            transition: color 0.15s, background 0.15s;
+        }
+        .remove-btn:hover { color: #e55; background: rgba(220, 50, 50, 0.08); }
+
+        .empty-state { color: var(--text-muted); font-size: 0.9rem; padding: 1rem 0; }
+
+        #mergeStatus { margin-top: 1rem; font-size: 0.9rem; font-weight: 500; min-height: 1.2em; }
+
+        .file-count-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: var(--container-bg); border: 1px solid var(--border-color);
+            border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; font-weight: 600;
+            color: var(--text-muted); margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-controls">
+        <a href="../../" class="btn-small">← Terug</a>
+        <a href="https://github.com/JoelvanHerwaarden/PDFVersionMerger" target="_blank" class="github-link" title="Broncode">
+            <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" alt="GitHub" class="github-icon">
+        </a>
+        <button class="btn-small" onclick="toggleTheme()" id="themeBtn">Mode</button>
+    </div>
+
+    <img src="https://www.nobleo-infra.nl/wp-content/uploads/2025/02/Nobleo_BI_Logo_RGB.png.webp" alt="Logo" class="logo">
+
+    <div class="container">
+        <h2>PDF Samenvoegen</h2>
+        <div class="description-box">
+            <p>Upload meerdere PDF-bestanden, orden ze via drag-and-drop en voeg ze samen tot één document. Originele paginaformaten blijven behouden.</p>
+        </div>
+
+        <div class="form-card">
+            <div class="upload-zone" id="uploadZone">
+                <input type="file" id="fileInput" accept="application/pdf" multiple>
+                <span class="upload-zone-icon">📄</span>
+                <span class="upload-zone-label">Klik of sleep PDF-bestanden hiernaartoe</span>
+                <span class="upload-zone-sub">Meerdere bestanden tegelijk zijn ondersteund</span>
+            </div>
+
+            <div id="fileCountWrap" style="display:none;">
+                <div class="file-count-badge">
+                    <span id="fileCountLabel">0 bestanden</span>
+                    <span style="color: var(--text-muted)">·</span>
+                    <span id="totalPageCountLabel">0 pagina's</span>
+                </div>
+            </div>
+
+            <div class="file-list" id="fileList">
+                <p class="empty-state" id="emptyState">Nog geen bestanden toegevoegd.</p>
+            </div>
+
+            <button class="main-btn" onclick="mergePDFs()" id="mergeBtn" disabled>
+                ⬇️ Samenvoegen &amp; Downloaden
+            </button>
+            <div id="mergeStatus"></div>
+        </div>
+    </div>
+
+    <footer>
+        <div>&copy; 2026 <a href="https://www.nobleo-infra.nl/" target="_blank">Nobleo Bouw en Infra</a></div>
+    </footer>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        let uploadedFiles = [];
+        let dragSrcIndex = null;
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            document.getElementById('themeBtn').innerText = theme === 'dark' ? '☀️ Light' : '🌙 Dark';
+        }
+        function toggleTheme() { setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
+        setTheme(localStorage.getItem('theme') || 'light');
+
+        // --- Upload zone ---
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+
+        fileInput.addEventListener('change', () => handleNewFiles(fileInput.files));
+
+        uploadZone.addEventListener('dragenter', (e) => { e.preventDefault(); uploadZone.classList.add('drag-active'); });
+        uploadZone.addEventListener('dragleave', (e) => { if (!uploadZone.contains(e.relatedTarget)) uploadZone.classList.remove('drag-active'); });
+        uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-active');
+            if (e.dataTransfer.files.length) handleNewFiles(e.dataTransfer.files);
+        });
+
+        async function handleNewFiles(files) {
+            const pdfs = Array.from(files).filter(f => f.type === 'application/pdf');
+            if (!pdfs.length) return;
+
+            for (const file of pdfs) {
+                const entry = { file, pageCount: null, thumbDataUrl: null, id: Date.now() + Math.random() };
+                uploadedFiles.push(entry);
+                renderFileList();
+                loadPDFMeta(entry).then(() => { renderFileList(); updateStats(); });
+            }
+            updateMergeButton();
+            updateStats();
+            fileInput.value = '';
+        }
+
+        async function loadPDFMeta(entry) {
+            try {
+                const buf = await entry.file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+                entry.pageCount = pdf.numPages;
+
+                const page = await pdf.getPage(1);
+                const vp = page.getViewport({ scale: 0.25 });
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(vp.width);
+                canvas.height = Math.round(vp.height);
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+                entry.thumbDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            } catch (e) {
+                entry.pageCount = '?';
+            }
+        }
+
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            renderFileList();
+            updateMergeButton();
+            updateStats();
+        }
+
+        function updateMergeButton() {
+            document.getElementById('mergeBtn').disabled = uploadedFiles.length < 2;
+        }
+
+        function updateStats() {
+            const wrap = document.getElementById('fileCountWrap');
+            if (uploadedFiles.length === 0) { wrap.style.display = 'none'; return; }
+            wrap.style.display = 'block';
+            document.getElementById('fileCountLabel').innerText = `${uploadedFiles.length} bestand${uploadedFiles.length !== 1 ? 'en' : ''}`;
+            const totalPages = uploadedFiles.reduce((s, f) => s + (typeof f.pageCount === 'number' ? f.pageCount : 0), 0);
+            document.getElementById('totalPageCountLabel').innerText = `${totalPages} pagina${totalPages !== 1 ? "'s" : ''}`;
+        }
+
+        function renderFileList() {
+            const list = document.getElementById('fileList');
+            const empty = document.getElementById('emptyState');
+
+            if (uploadedFiles.length === 0) {
+                list.innerHTML = '';
+                list.appendChild(empty);
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+
+            const existing = [...list.querySelectorAll('.file-card')];
+            list.innerHTML = '';
+
+            uploadedFiles.forEach((entry, index) => {
+                const card = document.createElement('div');
+                card.className = 'file-card';
+                card.draggable = true;
+                card.dataset.index = index;
+
+                const thumbHtml = entry.thumbDataUrl
+                    ? `<img src="${entry.thumbDataUrl}" style="width:48px;height:auto;display:block;border-radius:4px;" alt="Voorvertoning">`
+                    : `<span class="thumb-loading">⏳</span>`;
+
+                card.innerHTML = `
+                    <span class="drag-handle" title="Versleep om volgorde te wijzigen">⠿</span>
+                    <div class="thumb-wrap">${thumbHtml}</div>
+                    <div class="file-info">
+                        <span class="file-name" title="${entry.file.name}">${entry.file.name}</span>
+                        <span class="file-pages">${entry.pageCount !== null ? `${entry.pageCount} pagina${entry.pageCount !== 1 ? "'s" : ''}` : 'Laden...'}</span>
+                    </div>
+                    <div class="file-order-badge">${index + 1}</div>
+                    <button class="remove-btn" title="Verwijder" onclick="removeFile(${index})">✕</button>
+                `;
+
+                card.addEventListener('dragstart', (e) => {
+                    dragSrcIndex = index;
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', index);
+                    setTimeout(() => card.classList.add('dragging'), 0);
+                });
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('dragging');
+                    document.querySelectorAll('.file-card').forEach(c => c.classList.remove('drag-over'));
+                });
+                card.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragSrcIndex !== index) card.classList.add('drag-over');
+                });
+                card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+                card.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    card.classList.remove('drag-over');
+                    if (dragSrcIndex !== null && dragSrcIndex !== index) {
+                        const moved = uploadedFiles.splice(dragSrcIndex, 1)[0];
+                        uploadedFiles.splice(index, 0, moved);
+                        dragSrcIndex = null;
+                        renderFileList();
+                        updateStats();
+                    }
+                });
+
+                list.appendChild(card);
+            });
+        }
+
+        async function mergePDFs() {
+            const statusEl = document.getElementById('mergeStatus');
+            const btn = document.getElementById('mergeBtn');
+            btn.disabled = true;
+            statusEl.innerText = '⏳ Samenvoegen...';
+
+            try {
+                const { PDFDocument } = PDFLib;
+                const mergedPdf = await PDFDocument.create();
+
+                for (let i = 0; i < uploadedFiles.length; i++) {
+                    statusEl.innerText = `⏳ Verwerking ${i + 1} van ${uploadedFiles.length}...`;
+                    const bytes = await uploadedFiles[i].file.arrayBuffer();
+                    const srcPdf = await PDFDocument.load(bytes);
+                    const pages = await mergedPdf.copyPages(srcPdf, srcPdf.getPageIndices());
+                    pages.forEach(page => mergedPdf.addPage(page));
+                }
+
+                const pdfBytes = await mergedPdf.save();
+                const a = Object.assign(document.createElement('a'), {
+                    href: URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' })),
+                    download: 'Nobleo_Samengevoegd.pdf'
+                });
+                a.click();
+                statusEl.innerText = '✅ Klaar. Download gestart.';
+                statusEl.style.color = '#39d6b2';
+            } catch (e) {
+                statusEl.innerText = '❌ Er is een fout opgetreden.';
+                console.error(e);
+            } finally {
+                btn.disabled = uploadedFiles.length < 2;
+            }
+        }
+    </script>
+</body>
+</html>

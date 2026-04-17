@@ -3,396 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nobleo Bouw en Infra | PDF Vergelijker</title>
-    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    
+    <title>Nobleo PDF Tools</title>
+    <link rel="stylesheet" href="shared/style.css">
     <style>
-        :root {
-            --bg-color: #ffffff;
-            --container-bg: #fbfbfd;
-            --card-bg: #ffffff;
-            --text-main: #004268;
-            --text-muted: rgba(0, 66, 104, 0.7);
-            --accent: #0077bc;
-            --button-bg: #39d6b2;
-            --button-text: #ffffff;
-            --border-color: #d2d2d7;
-            --logo-filter: none;
-            --shadow: rgba(0, 66, 104, 0.08);
-            --modal-overlay: rgba(0, 43, 69, 0.85);
-            --github-filter: invert(18%) sepia(35%) therapeutic(100%) saturate(1200%) hue-rotate(180deg);
+        .container { max-width: 720px; }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 0;
+            text-align: left;
         }
 
-        [data-theme="dark"] {
-            --bg-color: #002b45;
-            --container-bg: rgba(255, 255, 255, 0.05);
-            --card-bg: #004268;
-            --text-main: #ffffff;
-            --text-muted: rgba(255, 255, 255, 0.7);
-            --accent: #39d6b2;
-            --button-bg: #39d6b2;
-            --button-text: #004268;
-            --border-color: rgba(255, 255, 255, 0.1);
-            --logo-filter: brightness(0) invert(1);
-            --shadow: rgba(0, 0, 0, 0.3);
-            --modal-overlay: rgba(0, 0, 0, 0.7);
-            --github-filter: invert(1);
+        .tool-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 2rem;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            box-shadow: 0 10px 30px var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .tool-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px var(--shadow);
+            border-color: var(--button-bg);
         }
 
-        * { box-sizing: border-box; -webkit-font-smoothing: antialiased; transition: background-color 0.3s ease, color 0.3s ease; }
-
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background-color: var(--bg-color); color: var(--text-main);
-            margin: 0; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh;
-        }
-
-        .header-controls { position: absolute; top: 20px; right: 20px; display: flex; gap: 12px; align-items: center; }
-        
-        .github-link {
-            display: flex; align-items: center; text-decoration: none; opacity: 0.8; transition: opacity 0.2s;
-        }
-        .github-link:hover { opacity: 1; }
-        .github-icon { width: 24px; height: 24px; filter: var(--github-filter); }
-
-        .btn-small {
-            background: var(--container-bg); border: 1px solid var(--border-color);
-            color: var(--text-main); padding: 8px 16px; border-radius: 20px;
-            cursor: pointer; font-size: 0.8rem; font-weight: 600;
-        }
-
-        .logo { max-width: 220px; height: auto; margin-bottom: 40px; filter: var(--logo-filter); }
-        .container { width: 100%; max-width: 650px; text-align: center; transition: max-width 0.4s ease-in-out; }
-        .container.full-width { max-width: 95vw; }
-
-        h2 { font-size: 2.2rem; font-weight: 700; color: var(--accent); margin-bottom: 1.5rem; letter-spacing: -0.02em; }
-
-        .description-box {
-            text-align: left; background: var(--container-bg); padding: 1.5rem 2rem;
-            border-radius: 20px; margin-bottom: 2rem; border: 1px solid var(--border-color);
-        }
-
-        .form-card {
-            background: var(--card-bg); padding: 2rem; border-radius: 24px;
-            box-shadow: 0 10px 30px var(--shadow); border: 1px solid var(--border-color);
-            margin-bottom: 2rem;
-        }
-
-        .form-group { margin-bottom: 1.5rem; text-align: left; }
-        label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; color: var(--accent); }
-        input[type="file"] { width: 100%; padding: 12px; background: var(--container-bg); border-radius: 12px; border: 2px dashed var(--border-color); color: var(--text-main); }
-
-        button.main-btn { 
-            background: var(--button-bg); color: var(--button-text); border: none; 
-            padding: 1.1rem 3rem; border-radius: 14px; cursor: pointer; font-size: 1.1rem; font-weight: 700; width: 100%;
-        }
-
-        .preview-section { display: none; margin-top: 2rem; animation: fadeIn 0.6s ease forwards; width: 100%; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .nav-controls {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 1rem; background: var(--container-bg); padding: 10px 20px;
-            border-radius: 15px; border: 1px solid var(--border-color);
-            flex-wrap: wrap; gap: 10px;
-        }
-
-        .page-jump-container { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: bold; }
-        .page-input { 
-            width: 45px; padding: 5px; border-radius: 8px; border: 1px solid var(--border-color); 
-            text-align: center; background: var(--card-bg); color: var(--text-main); font-weight: bold;
-        }
-
-        .comparison-container {
-            position: relative; width: 100%; 
-            border-radius: 20px; overflow: hidden; border: 1px solid var(--border-color);
-            background: #fff; box-shadow: 0 10px 30px var(--shadow);
-        }
-
-        .pdf-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; background: white; }
-        #canvas-right { clip-path: inset(0 0 0 50%); z-index: 2; }
-        .slider-input {
-            position: absolute; -webkit-appearance: none; appearance: none;
-            width: 100%; height: 100%; background: transparent;
-            top: 0; left: 0; z-index: 10; cursor: ew-resize; margin: 0;
-        }
-        .divider-line {
-            position: absolute; top: 0; bottom: 0; left: 50%;
-            width: 3px; background: var(--button-bg); z-index: 9;
-            pointer-events: none; box-shadow: 0 0 10px rgba(0,0,0,0.3);
-        }
-
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--modal-overlay); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(8px);
-        }
-        .modal-overlay.active { display: flex; }
-        .modal-content { 
-            background: var(--card-bg); width: 90%; max-width: 600px; border-radius: 28px; padding: 2.5rem; 
-            max-height: 85vh; overflow-y: auto; position: relative;
-        }
-        .faq-item { margin-bottom: 1.5rem; text-align: left; }
-        .faq-item strong { display: block; color: var(--accent); margin-bottom: 5px; }
-
-        #status { margin-top: 1.5rem; font-size: 0.9rem; font-weight: 500; }
-        footer { margin-top: auto; padding-top: 30px; font-size: 0.85rem; color: var(--text-muted); text-align: center; }
-        footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
-        footer a:hover { text-decoration: underline; }
-
-        .active-toggle { background: var(--button-bg) !important; color: var(--button-text) !important; border-color: var(--button-bg) !important; }
-        
-        .visitor-counter { margin-top: 12px; opacity: 0.8; }
+        .tool-icon { font-size: 2.2rem; margin-bottom: 1rem; display: block; line-height: 1; }
+        .tool-name { font-size: 1.15rem; font-weight: 700; color: var(--accent); margin-bottom: 0.5rem; }
+        .tool-desc { font-size: 0.88rem; color: var(--text-muted); line-height: 1.55; margin: 0 0 1.5rem 0; }
+        .tool-cta { font-size: 0.85rem; font-weight: 700; color: var(--button-bg); }
     </style>
 </head>
 <body>
 
     <div class="header-controls">
-        <a href="https://github.com/JoelvanHerwaarden/PDFVersionMerger" target="_blank" class="github-link" title="Source Code">
+        <a href="https://github.com/JoelvanHerwaarden/PDFVersionMerger" target="_blank" class="github-link" title="Bekijk broncode op GitHub">
             <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" alt="GitHub" class="github-icon">
         </a>
-        <button class="btn-small" onclick="toggleModal()">💡 Info & FAQ</button>
         <button class="btn-small" onclick="toggleTheme()" id="themeBtn">Mode</button>
     </div>
 
-    <img src="https://www.nobleo-infra.nl/wp-content/uploads/2025/02/Nobleo_BI_Logo_RGB.png.webp" alt="Logo" class="logo">
+    <img src="https://www.nobleo-infra.nl/wp-content/uploads/2025/02/Nobleo_BI_Logo_RGB.png.webp" alt="Nobleo Bouw en Infra" class="logo">
 
-    <div class="container" id="mainContainer">
-        <h2>Document vergelijker</h2>
+    <div class="container">
+        <h2>PDF Tools</h2>
         <div class="description-box">
-            <p style="margin: 0; color: var(--text-muted); line-height: 1.5;">
-                Selecteer twee PDF-rapporten om deze <strong>interactief</strong> te vergelijken en zij-aan-zij samen te voegen.
-            </p>
+            <p>Selecteer een tool om te beginnen. Alle verwerking vindt lokaal in uw browser plaats &mdash; uw documenten worden nooit geüpload naar een server.</p>
         </div>
 
-        <div class="form-card">
-            <div class="form-group">
-                <label for="pdf1">Referentie Document (Links)</label>
-                <input type="file" id="pdf1" accept="application/pdf">
-            </div>
-            <div class="form-group">
-                <label for="pdf2">Wijziging / Variant (Rechts)</label>
-                <input type="file" id="pdf2" accept="application/pdf">
-            </div>
-            <button class="main-btn" onclick="processDocuments()">Genereer Vergelijking</button>
-            <div id="status"></div>
-        </div>
+        <div class="tools-grid">
+            <a href="tools/version-compare/" class="tool-card">
+                <span class="tool-icon">↔️</span>
+                <div class="tool-name">Document Vergelijker</div>
+                <p class="tool-desc">Vergelijk twee PDF-versies zij-aan-zij met een interactieve slider. Download de volledige vergelijking als landscape PDF.</p>
+                <span class="tool-cta">Open tool →</span>
+            </a>
 
-        <div id="previewSection" class="preview-section">
-            <button class="main-btn" style="margin-bottom: 2rem; background: var(--accent);" onclick="downloadLandscapePDF()">
-                ⬇️ Download Volledige Vergelijking (.pdf)
-            </button>
-
-            <div class="nav-controls">
-                <button class="btn-small" onclick="changePage(-1)" id="prevBtn">⬅️ Vorige</button>
-                <div class="page-jump-container">
-                    <span>Pagina</span>
-                    <input type="number" id="pageInput" class="page-input" min="1" value="1" onchange="jumpToPage()">
-                    <span id="totalPagesLabel">van 1</span>
-                </div>
-                <button class="btn-small" onclick="changePage(1)" id="nextBtn">Volgende ➡️</button>
-                <button class="btn-small" id="fullWidthBtn" onclick="toggleFullWidth()">↔️ Paginabreedte</button>
-            </div>
-
-            <div class="comparison-container" id="compContainer">
-                <canvas id="canvas-left" class="pdf-canvas"></canvas>
-                <canvas id="canvas-right" class="pdf-canvas"></canvas>
-                <div id="divider" class="divider-line"></div>
-                <input type="range" min="0" max="100" value="50" class="slider-input" id="compSlider">
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="faqModal" onclick="if(event.target == this) toggleModal()">
-        <div class="modal-content">
-            <h2 style="color: var(--accent); margin-top: 0;">Info & FAQ</h2>
-            
-            <div class="faq-item">
-                <strong>Is dit veilig voor vertrouwelijke data?</strong>
-                <p>Ja. De applicatie gebruikt lokale webtools (PDF.js en PDF-Lib). Uw documenten worden nooit geüpload naar een server; alle verwerking vindt plaats in het tijdelijke geheugen van uw eigen browser.</p>
-            </div>
-
-            <div class="faq-item">
-                <strong>Hoe werkt de vergelijker?</strong>
-                <p>U kunt met de slider op elke pagina visueel zoeken naar verschillen. Gebruik de "Vorige" en "Volgende" knoppen om door het document te bladeren. Gebruik de "Paginabreedte" knop om het beeld schermvullend te maken.</p>
-            </div>
-
-            <div class="faq-item">
-                <strong>Wat gebeurt er als documenten niet even lang zijn?</strong>
-                <p>De tool bepaalt het totaal aantal pagina's op basis van het langste document. De kortere PDF zal op de extra pagina's als een witvlak (leeg) worden weergegeven.</p>
-            </div>
-
-            <div class="faq-item">
-                <strong>Werkt de download voor alle pagina's?</strong>
-                <p>Ja. De "Download" knop genereert een nieuw PDF-bestand waarin alle pagina's van beide documenten zij-aan-zij in landscape-formaat zijn geplaatst.</p>
-            </div>
-
-            <div class="faq-item">
-                <strong>Source Code & Ontwikkeling?</strong>
-                <p>Dit project is open-source ontwikkeld. Bezoek de GitHub repository (link rechtsboven) voor de broncode of om bij te dragen aan de ontwikkeling.</p>
-            </div>
-
-            <button class="btn-small" onclick="toggleModal()" style="width: 100%; margin-top: 1rem;">Sluiten</button>
+            <a href="tools/pdf-merge/" class="tool-card">
+                <span class="tool-icon">📎</span>
+                <div class="tool-name">PDF Samenvoegen</div>
+                <p class="tool-desc">Upload meerdere PDF-bestanden, sorteer ze via drag-and-drop en voeg ze samen tot één document. Originele paginaformaten blijven behouden.</p>
+                <span class="tool-cta">Open tool →</span>
+            </a>
         </div>
     </div>
 
     <footer>
-        <div>&copy; 2026 <a href="https://www.nobleo-infra.nl/" target="_blank">Nobleo Bouw en Infra</a> | 🤖 Vibe-coded using Gemini</div>
-        
+        <div>&copy; 2026 <a href="https://www.nobleo-infra.nl/" target="_blank">Nobleo Bouw en Infra</a></div>
         <div class="visitor-counter">
             <img src="https://hitscounter.dev/api/hit?url=https%3A%2F%2Fjoelvanherwaarden.github.io%2FPDFVersionMerger%2F&label=&icon=github&color=%23198754&message=&style=flat&tz=UTC" alt="Hits">
         </div>
     </footer>
 
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-        let pdfDoc1, pdfDoc2, file1Blob, file2Blob;
-        let currentPage = 1;
-        let totalPages = 1;
-        let isFullWidth = false;
-
-        function toggleModal() { document.getElementById('faqModal').classList.toggle('active'); }
-        
         function setTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
             localStorage.setItem('theme', theme);
             document.getElementById('themeBtn').innerText = theme === 'dark' ? '☀️ Light' : '🌙 Dark';
         }
-        function toggleTheme() { setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
+        function toggleTheme() {
+            setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        }
         setTheme(localStorage.getItem('theme') || 'light');
-
-        function toggleFullWidth() {
-            isFullWidth = !isFullWidth;
-            const container = document.getElementById('mainContainer');
-            const btn = document.getElementById('fullWidthBtn');
-            if (isFullWidth) {
-                container.classList.add('full-width');
-                btn.classList.add('active-toggle');
-            } else {
-                container.classList.remove('full-width');
-                btn.classList.remove('active-toggle');
-            }
-        }
-
-        document.getElementById('compSlider').addEventListener('input', (e) => {
-            const val = e.target.value;
-            document.getElementById('canvas-right').style.clipPath = `inset(0 0 0 ${val}%)`;
-            document.getElementById('divider').style.left = `${val}%`;
-        });
-
-        async function processDocuments() {
-            file1Blob = document.getElementById('pdf1').files[0];
-            file2Blob = document.getElementById('pdf2').files[0];
-            const statusEl = document.getElementById('status');
-
-            if (!file1Blob || !file2Blob) {
-                statusEl.innerText = "⚠️ Selecteer eerst twee documenten.";
-                return;
-            }
-
-            statusEl.innerText = "⏳ Bezig met laden...";
-            try {
-                pdfDoc1 = await pdfjsLib.getDocument({ data: await file1Blob.arrayBuffer() }).promise;
-                pdfDoc2 = await pdfjsLib.getDocument({ data: await file2Blob.arrayBuffer() }).promise;
-                
-                totalPages = Math.max(pdfDoc1.numPages, pdfDoc2.numPages);
-                currentPage = 1;
-                
-                document.getElementById('pageInput').max = totalPages;
-                document.getElementById('totalPagesLabel').innerText = `van ${totalPages}`;
-                
-                await renderCurrentPage();
-
-                document.getElementById('previewSection').style.display = 'block';
-                statusEl.innerText = "✅ Geladen.";
-                statusEl.style.color = "#39d6b2";
-            } catch (error) {
-                statusEl.innerText = "❌ Fout bij inladen.";
-            }
-        }
-
-        async function jumpToPage() {
-            const input = document.getElementById('pageInput');
-            let val = parseInt(input.value);
-            if (isNaN(val) || val < 1) val = 1;
-            if (val > totalPages) val = totalPages;
-            currentPage = val;
-            input.value = val;
-            await renderCurrentPage();
-        }
-
-        async function changePage(offset) {
-            const newPage = currentPage + offset;
-            if (newPage >= 1 && newPage <= totalPages) {
-                currentPage = newPage;
-                document.getElementById('pageInput').value = currentPage;
-                await renderCurrentPage();
-            }
-        }
-
-        async function renderCurrentPage() {
-            document.getElementById('prevBtn').disabled = currentPage === 1;
-            document.getElementById('nextBtn').disabled = currentPage === totalPages;
-
-            const [v1, v2] = await Promise.all([
-                renderSingleCanvas(pdfDoc1, currentPage, 'canvas-left'),
-                renderSingleCanvas(pdfDoc2, currentPage, 'canvas-right')
-            ]);
-
-            const activeViewport = v1 || v2;
-            if (activeViewport) {
-                const ratio = activeViewport.width / activeViewport.height;
-                document.getElementById('compContainer').style.aspectRatio = `${ratio}`;
-            }
-        }
-
-        async function renderSingleCanvas(pdfDoc, pageNum, canvasId) {
-            const canvas = document.getElementById(canvasId);
-            const context = canvas.getContext('2d');
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            
-            if (pageNum > pdfDoc.numPages) return null; 
-
-            const page = await pdfDoc.getPage(pageNum);
-            const viewport = page.getViewport({ scale: 2.5 }); 
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
-            return viewport;
-        }
-
-        async function downloadLandscapePDF() {
-            const statusEl = document.getElementById('status');
-            statusEl.innerText = "⏳ Download voorbereiden...";
-            try {
-                const { PDFDocument } = PDFLib;
-                const libPdf1 = await PDFDocument.load(await file1Blob.arrayBuffer());
-                const libPdf2 = await PDFDocument.load(await file2Blob.arrayBuffer());
-                const mergedPdf = await PDFDocument.create();
-
-                for (let i = 0; i < totalPages; i++) {
-                    let w = 595, h = 841;
-                    let p1 = i < libPdf1.getPageCount() ? libPdf1.getPage(i) : null;
-                    let p2 = i < libPdf2.getPageCount() ? libPdf2.getPage(i) : null;
-                    if (p1) { w = p1.getWidth(); h = p1.getHeight(); }
-                    else if (p2) { w = p2.getWidth(); h = p2.getHeight(); }
-                    const newPage = mergedPdf.addPage([w * 2, h]);
-                    if (p1) newPage.drawPage(await mergedPdf.embedPage(p1), { x: 0, y: 0 });
-                    if (p2) newPage.drawPage(await mergedPdf.embedPage(p2), { x: w, y: 0 });
-                }
-                const pdfBytes = await mergedPdf.save();
-                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'Nobleo_Vergelijking.pdf';
-                a.click();
-                statusEl.innerText = "✅ Klaar.";
-            } catch (e) {
-                statusEl.innerText = "❌ Export fout.";
-            }
-        }
     </script>
 </body>
 </html>
