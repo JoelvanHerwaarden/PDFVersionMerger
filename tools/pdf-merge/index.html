@@ -178,15 +178,18 @@
             const pdfs = Array.from(files).filter(f => f.type === 'application/pdf');
             if (!pdfs.length) return;
 
-            for (const file of pdfs) {
-                const entry = { file, pageCount: null, thumbDataUrl: null, id: Date.now() + Math.random() };
-                uploadedFiles.push(entry);
-                renderFileList();
-                loadPDFMeta(entry).then(() => { renderFileList(); updateStats(); });
-            }
+            const newEntries = pdfs.map(file => ({ file, pageCount: null, thumbDataUrl: null, id: Date.now() + Math.random() }));
+            uploadedFiles.push(...newEntries);
+            renderFileList();
             updateMergeButton();
             updateStats();
             fileInput.value = '';
+
+            for (const entry of newEntries) {
+                await loadPDFMeta(entry);
+                renderFileList();
+                updateStats();
+            }
         }
 
         async function loadPDFMeta(entry) {
