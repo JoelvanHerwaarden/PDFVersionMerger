@@ -127,6 +127,81 @@
             .results-grid { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
             .result-val { font-size: 1rem; }
         }
+
+        /* ── Calculation steps ──────────────────────────────── */
+        .steps-toggle {
+            margin-top: 1rem;
+            padding: 0.6rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 0.83rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            user-select: none;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .steps-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+        .steps-chevron {
+            display: inline-block;
+            font-size: 0.65rem;
+            transition: transform 0.25s;
+            flex-shrink: 0;
+        }
+        .steps-chevron.open { transform: rotate(90deg); }
+
+        .steps-panel {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.35s ease;
+        }
+        .steps-panel.open { max-height: 900px; }
+
+        .steps-inner { padding: 0.85rem 0 0.25rem; }
+
+        .steps-heading {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--text-muted);
+            margin-bottom: 0.55rem;
+        }
+        .formulas-heading { margin-top: 1rem; }
+
+        .step-item {
+            font-size: 0.86rem;
+            line-height: 1.65;
+            color: var(--text-main);
+            padding: 0.5rem 0.8rem;
+            background: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            margin-bottom: 0.4rem;
+        }
+        .step-item em     { color: var(--accent); font-style: normal; font-weight: 600; }
+        .step-item strong { color: var(--accent); font-weight: 700; }
+
+        .formulas-block {
+            background: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.55rem 0.9rem;
+        }
+        .formula-row {
+            font-size: 0.82rem;
+            font-family: 'Courier New', Courier, monospace;
+            color: var(--text-main);
+            padding: 0.3rem 0;
+            border-bottom: 1px solid var(--border-color);
+            line-height: 1.55;
+        }
+        .formula-row:last-child { border-bottom: none; }
     </style>
 </head>
 <body>
@@ -220,6 +295,25 @@
                         <div class="result-unit">%</div>
                     </div>
                 </div>
+
+                <!-- Calculation steps collapsible -->
+                <div class="steps-toggle" id="stepsToggle" onclick="toggleSteps()">
+                    <span class="steps-chevron" id="stepsChevron">▶</span>
+                    <span id="stepsToggleLabel">Berekeningsstappen tonen</span>
+                </div>
+                <div class="steps-panel" id="stepsPanel">
+                    <div class="steps-inner">
+                        <div class="steps-heading">Stap voor stap</div>
+                        <div id="stepsContent"></div>
+                        <div class="steps-heading formulas-heading">Formules</div>
+                        <div class="formulas-block">
+                            <div class="formula-row">Helling % = (verticaal / horizontaal) × 100</div>
+                            <div class="formula-row">α = arctan(verticaal / horizontaal)</div>
+                            <div class="formula-row">β = 90° − α</div>
+                            <div class="formula-row">Schuine zijde = √(verticaal² + horizontaal²)</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- SVG visualization -->
@@ -288,6 +382,49 @@
             document.getElementById('triSvg').style.display = 'none';
         }
 
+        // ── Calculation steps ──────────────────────────────────────────────
+        let stepsVisible = false;
+
+        function toggleSteps() {
+            stepsVisible = !stepsVisible;
+            document.getElementById('stepsPanel').classList.toggle('open', stepsVisible);
+            document.getElementById('stepsChevron').classList.toggle('open', stepsVisible);
+            document.getElementById('stepsToggleLabel').textContent =
+                stepsVisible ? 'Berekeningsstappen verbergen' : 'Berekeningsstappen tonen';
+        }
+
+        function renderSteps(v, h, alpha, beta, hyp, slope, inputMode) {
+            const fv     = fmt(v,     4);
+            const fh     = fmt(h,     4);
+            const fa     = fmt(alpha, 4);
+            const fb     = fmt(beta,  4);
+            const fHyp   = fmt(hyp,   4);
+            const fv2    = fmt(v * v, 4);
+            const fh2    = fmt(h * h, 4);
+
+            let steps;
+            if (inputMode === 'ratio') {
+                const fSlope = fmt(slope, 2);
+                steps = [
+                    `1. Invoer: verticaal = <em>${fv}</em>, horizontaal = <em>${fh}</em>`,
+                    `2. Helling = (verticaal / horizontaal) × 100 = (${fv} / ${fh}) × 100 = <strong>${fSlope}%</strong>`,
+                    `3. Hoek α = arctan(verticaal / horizontaal) = arctan(${fv} / ${fh}) ≈ <strong>${fa}°</strong>`,
+                    `4. Hoek β = 90° − α = 90° − ${fa}° = <strong>${fb}°</strong>`,
+                    `5. Schuine zijde = √(${fv}² + ${fh}²) = √(${fv2} + ${fh2}) ≈ <strong>${fHyp}</strong>`,
+                ];
+            } else {
+                steps = [
+                    `1. Invoer: helling = <em>${fv}%</em> → verticaal = ${fv}, horizontaal = 100`,
+                    `2. Hoek α = arctan(helling / 100) = arctan(${fv} / 100) ≈ <strong>${fa}°</strong>`,
+                    `3. Hoek β = 90° − α = 90° − ${fa}° = <strong>${fb}°</strong>`,
+                    `4. Schuine zijde = √(${fv}² + 100²) = √(${fv2} + 10000) ≈ <strong>${fHyp}</strong>`,
+                ];
+            }
+
+            document.getElementById('stepsContent').innerHTML =
+                steps.map(s => `<div class="step-item">${s}</div>`).join('');
+        }
+
         // ── Main calculation ────────────────────────────────────────────────
         function calculate() {
             clearErrors();
@@ -338,6 +475,7 @@
             document.getElementById('resultsSection').style.display = '';
 
             renderTriangle(v, h, alpha, beta, hyp);
+            renderSteps(v, h, alpha, beta, hyp, slope, mode);
         }
 
         // ── SVG triangle renderer ───────────────────────────────────────────
