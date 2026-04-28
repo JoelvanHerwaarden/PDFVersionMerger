@@ -72,6 +72,6 @@ Bereken hoeken en hellingspercentage van een rechthoekige driehoek via een verho
 
 ## 👨‍💻 Ontwikkeling
 
-Vibe-coded using Gemini 🤖
+Vibe-coded 🤖
 
 © 2026 Nobleo Bouw en Infra — [www.nobleo-infra.nl](https://www.nobleo-infra.nl)
