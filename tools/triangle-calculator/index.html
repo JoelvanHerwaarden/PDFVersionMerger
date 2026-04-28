@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nobleo | Hoek & Helling Berekening</title>
+    <link rel="stylesheet" href="../../shared/style.css">
+    <style>
+        .mode-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 0.65rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            background: var(--container-bg);
+            color: var(--text-main);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover { opacity: 0.8; }
+
+        .mode-panel { display: none; }
+        .mode-panel.active { display: block; }
+
+        .ratio-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .ratio-row .num-input { flex: 1; }
+
+        .ratio-sep {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            flex-shrink: 0;
+            line-height: 1;
+        }
+
+        .num-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--container-bg);
+            color: var(--text-main);
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        .num-input:focus { outline: none; border-color: var(--accent); }
+        .num-input.field-error { border-color: #e05252; }
+
+        .error-hint {
+            color: #e05252;
+            font-size: 0.8rem;
+            margin-top: 6px;
+            display: none;
+        }
+        .error-hint.show { display: block; }
+
+        .results-section { margin-top: 1.5rem; }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .result-card {
+            background: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 0.9rem 0.75rem;
+            text-align: center;
+        }
+
+        .result-lbl {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+
+        .result-val {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1.2;
+            word-break: break-all;
+        }
+
+        .result-unit {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .svg-box {
+            margin-top: 1.5rem;
+            background: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 0.75rem;
+            overflow: hidden;
+        }
+
+        .svg-placeholder {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            padding: 2.5rem 1rem;
+        }
+
+        #triSvg { width: 100%; height: auto; display: block; }
+
+        @media (max-width: 480px) {
+            .results-grid { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
+            .result-val { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-controls">
+        <a href="../../" class="btn-small">← Terug</a>
+        <a href="https://github.com/JoelvanHerwaarden/PDFVersionMerger" target="_blank" class="github-link" title="Broncode">
+            <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" alt="GitHub" class="github-icon">
+        </a>
+        <button class="btn-small" onclick="toggleTheme()" id="themeBtn">Mode</button>
+    </div>
+
+    <img src="https://www.nobleo-infra.nl/wp-content/uploads/2025/02/Nobleo_BI_Logo_RGB.png.webp" alt="Nobleo Bouw en Infra" class="logo">
+
+    <div class="container">
+        <h2>Hoek & Helling Berekening</h2>
+
+        <div class="description-box">
+            <p>Bereken de hoeken en helling van een rechthoekige driehoek op basis van een verhouding (bijv. 1:50) of een hellingspercentage. Alle berekeningen worden lokaal in uw browser uitgevoerd.</p>
+        </div>
+
+        <div class="form-card">
+
+            <!-- Mode tabs -->
+            <div class="mode-tabs">
+                <button class="tab-btn active-toggle" id="tabRatio" onclick="switchMode('ratio')">📐 Verhouding (1:n)</button>
+                <button class="tab-btn" id="tabPct" onclick="switchMode('pct')">📊 Helling (%)</button>
+            </div>
+
+            <!-- Mode A: Ratio input -->
+            <div class="mode-panel active" id="panelRatio">
+                <div class="form-group">
+                    <label for="rV">Verhouding &mdash; verticaal : horizontaal</label>
+                    <div class="ratio-row">
+                        <input type="number" class="num-input" id="rV"
+                            placeholder="1" min="0.0001" step="any" oninput="calculate()">
+                        <span class="ratio-sep">:</span>
+                        <input type="number" class="num-input" id="rH"
+                            placeholder="50" min="0.0001" step="any" oninput="calculate()">
+                    </div>
+                    <p class="error-hint" id="ratioErr">Vul twee geldige positieve getallen in.</p>
+                </div>
+            </div>
+
+            <!-- Mode B: Slope percentage input -->
+            <div class="mode-panel" id="panelPct">
+                <div class="form-group">
+                    <label for="slopeIn">Hellingspercentage (%)</label>
+                    <input type="number" class="num-input" id="slopeIn"
+                        placeholder="2" min="0.0001" step="any" oninput="calculate()">
+                    <p class="error-hint" id="pctErr">Vul een geldig positief getal in.</p>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="results-section" id="resultsSection" style="display:none;">
+                <div class="results-grid">
+                    <div class="result-card">
+                        <div class="result-lbl">Hoek &alpha;</div>
+                        <div class="result-val" id="rAlpha">–</div>
+                        <div class="result-unit">graden</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-lbl">Hoek &beta;</div>
+                        <div class="result-val" id="rBeta">–</div>
+                        <div class="result-unit">graden</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-lbl">Rechte hoek</div>
+                        <div class="result-val">90°</div>
+                        <div class="result-unit">graden</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-lbl">Verticaal</div>
+                        <div class="result-val" id="rVert">–</div>
+                        <div class="result-unit">eenheden</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-lbl">Horizontaal</div>
+                        <div class="result-val" id="rHoriz">–</div>
+                        <div class="result-unit">eenheden</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-lbl">Schuine zijde</div>
+                        <div class="result-val" id="rHyp">–</div>
+                        <div class="result-unit">eenheden</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-lbl">Helling</div>
+                        <div class="result-val" id="rSlope">–</div>
+                        <div class="result-unit">%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SVG visualization -->
+            <div class="svg-box">
+                <div class="svg-placeholder" id="svgPlaceholder">
+                    📐 Voer een waarde in om de driehoek te visualiseren.
+                </div>
+                <svg id="triSvg" viewBox="0 0 440 290"
+                    xmlns="http://www.w3.org/2000/svg" style="display:none;">
+                    <g id="triGroup"></g>
+                </svg>
+            </div>
+
+        </div>
+    </div>
+
+    <footer>
+        <div>&copy; 2026 <a href="https://www.nobleo-infra.nl/" target="_blank">Nobleo Bouw en Infra</a></div>
+    </footer>
+
+    <script>
+        // ── Theme ───────────────────────────────────────────────────────────
+        function setTheme(t) {
+            document.documentElement.setAttribute('data-theme', t);
+            localStorage.setItem('theme', t);
+            document.getElementById('themeBtn').innerText = t === 'dark' ? '☀️ Light' : '🌙 Dark';
+        }
+        function toggleTheme() {
+            setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        }
+        setTheme(localStorage.getItem('theme') || 'light');
+
+        // ── Mode switching ──────────────────────────────────────────────────
+        let mode = 'ratio';
+
+        function switchMode(m) {
+            mode = m;
+            const isRatio = m === 'ratio';
+            document.getElementById('tabRatio').classList.toggle('active-toggle', isRatio);
+            document.getElementById('tabPct').classList.toggle('active-toggle', !isRatio);
+            document.getElementById('panelRatio').classList.toggle('active', isRatio);
+            document.getElementById('panelPct').classList.toggle('active', !isRatio);
+            clearErrors();
+            calculate();
+        }
+
+        // ── Helpers ─────────────────────────────────────────────────────────
+        // Convert radians to degrees
+        function toDeg(rad) { return rad * 180 / Math.PI; }
+
+        // Format a number to at most `d` decimals, stripping trailing zeros
+        function fmt(n, d) { return parseFloat(n.toFixed(d)).toString(); }
+
+        function clearErrors() {
+            ['rV', 'rH', 'slopeIn'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('field-error');
+            });
+            document.getElementById('ratioErr').classList.remove('show');
+            document.getElementById('pctErr').classList.remove('show');
+        }
+
+        function hideResults() {
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('svgPlaceholder').style.display = '';
+            document.getElementById('triSvg').style.display = 'none';
+        }
+
+        // ── Main calculation ────────────────────────────────────────────────
+        function calculate() {
+            clearErrors();
+            let v, h;
+
+            if (mode === 'ratio') {
+                v = parseFloat(document.getElementById('rV').value);
+                h = parseFloat(document.getElementById('rH').value);
+                const hasInput = document.getElementById('rV').value || document.getElementById('rH').value;
+                if (!v || !h || v <= 0 || h <= 0) {
+                    if (hasInput) {
+                        document.getElementById('rV').classList.add('field-error');
+                        document.getElementById('rH').classList.add('field-error');
+                        document.getElementById('ratioErr').classList.add('show');
+                    }
+                    hideResults();
+                    return;
+                }
+            } else {
+                const s = parseFloat(document.getElementById('slopeIn').value);
+                if (!s || s <= 0) {
+                    if (document.getElementById('slopeIn').value) {
+                        document.getElementById('slopeIn').classList.add('field-error');
+                        document.getElementById('pctErr').classList.add('show');
+                    }
+                    hideResults();
+                    return;
+                }
+                // slope% = (vertical / horizontal) × 100 → normalize: v = s, h = 100
+                v = s;
+                h = 100;
+            }
+
+            // α = angle at base-right corner (between hypotenuse and horizontal)
+            // β = angle at top-left corner (between hypotenuse and vertical)
+            const alpha = toDeg(Math.atan(v / h));
+            const beta  = 90 - alpha;
+            const hyp   = Math.sqrt(v * v + h * h);
+            const slope = (v / h) * 100;
+
+            document.getElementById('rAlpha').textContent = fmt(alpha, 4) + '°';
+            document.getElementById('rBeta').textContent  = fmt(beta,  4) + '°';
+            document.getElementById('rVert').textContent  = fmt(v,     4);
+            document.getElementById('rHoriz').textContent = fmt(h,     4);
+            document.getElementById('rHyp').textContent   = fmt(hyp,   4);
+            document.getElementById('rSlope').textContent = fmt(slope,  2) + '%';
+
+            document.getElementById('resultsSection').style.display = '';
+
+            renderTriangle(v, h, alpha, beta, hyp);
+        }
+
+        // ── SVG triangle renderer ───────────────────────────────────────────
+        function renderTriangle(v, h, alphaDeg, betaDeg, hyp) {
+            // SVG canvas dimensions and padding
+            const W = 440, H = 290;
+            const pL = 85, pR = 65, pT = 55, pB = 48;
+
+            const maxW = W - pL - pR;
+            const maxH = H - pT - pB;
+            const scale = Math.min(maxW / h, maxH / v);
+            const sw = h * scale;  // scaled horizontal side
+            const sh = v * scale;  // scaled vertical side
+            const hypS = Math.sqrt(sw * sw + sh * sh); // scaled hypotenuse
+
+            // Vertices of the right triangle:
+            //   B = bottom-left  (right angle, 90°)
+            //   C = bottom-right (angle α)
+            //   A = top-left     (angle β)
+            const Bx = pL,      By = H - pB;
+            const Cx = Bx + sw, Cy = By;
+            const Ax = Bx,      Ay = By - sh;
+
+            // Arc radius scales with the shorter side, capped at 28px
+            const R  = Math.min(28, sw * 0.22, sh * 0.22);
+            const RR = R * 0.62;  // right-angle marker square size
+
+            // Read CSS custom property colors so SVG respects the current theme
+            const cs = getComputedStyle(document.documentElement);
+            const clrAccent = cs.getPropertyValue('--accent').trim();
+            const clrMuted  = cs.getPropertyValue('--text-muted').trim();
+            const clrFill   = clrAccent + '18'; // semi-transparent triangle fill
+
+            const font = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';
+
+            // Unit direction vectors from each vertex toward adjacent vertices
+            // At C: toward A and toward B
+            const dCA = { x: (Ax - Cx) / hypS, y: (Ay - Cy) / hypS };
+            const dCB = { x: -1,                y: 0               }; // (Bx-Cx)/sw = -1
+
+            // At A: toward C and toward B
+            const dAC = { x: (Cx - Ax) / hypS, y: (Cy - Ay) / hypS };
+            const dAB = { x: 0,                 y: 1               }; // straight down
+
+            // Build an SVG arc path from vertex (vx,vy) at two directions d1→d2 with radius r
+            // sweep=0 → counterclockwise on screen (arc at C, spanning angle α)
+            // sweep=1 → clockwise on screen        (arc at A, spanning angle β)
+            function arcPath(vx, vy, d1, d2, r, sweep) {
+                return `M ${vx + d1.x * r} ${vy + d1.y * r} `
+                     + `A ${r} ${r} 0 0 ${sweep} `
+                     + `${vx + d2.x * r} ${vy + d2.y * r}`;
+            }
+
+            // Angle label positions: place text along the bisector of each angle arc
+            function bisector(d1, d2) {
+                const bx = d1.x + d2.x, by = d1.y + d2.y;
+                const len = Math.sqrt(bx * bx + by * by);
+                return len < 0.0001 ? { x: 0, y: 0 } : { x: bx / len, y: by / len };
+            }
+
+            const bisC = bisector(dCA, dCB);
+            const bisA = bisector(dAC, dAB);
+            const labelOffset = R + 20;
+
+            const αLx = Cx + bisC.x * labelOffset;
+            const αLy = Cy + bisC.y * labelOffset + 4;
+            const βLx = Ax + bisA.x * labelOffset;
+            const βLy = Ay + bisA.y * labelOffset + 4;
+
+            // Side label positions
+            const vertLx  = Bx - 8;
+            const vertLy  = (Ay + By) / 2;
+            const horizLx = (Bx + Cx) / 2;
+            const horizLy = By + 20;
+            const hypLx   = (Ax + Cx) / 2 + 14;
+            const hypLy   = (Ay + Cy) / 2 - 10;
+
+            // Short display for side values (max 3 decimal places, no trailing zeros)
+            const fmtS = (n) => parseFloat(n.toFixed(3)).toString();
+
+            // Right-angle marker at B (small square inside triangle)
+            const raPath = `M ${Bx+RR},${By} L ${Bx+RR},${By-RR} L ${Bx},${By-RR}`;
+
+            document.getElementById('triGroup').innerHTML = `
+                <polygon points="${Ax},${Ay} ${Bx},${By} ${Cx},${Cy}"
+                    fill="${clrFill}" stroke="${clrAccent}" stroke-width="2.5" stroke-linejoin="round"/>
+
+                <path d="${raPath}" fill="none" stroke="${clrMuted}" stroke-width="1.5"/>
+
+                <path d="${arcPath(Cx, Cy, dCA, dCB, R, 0)}"
+                    fill="none" stroke="${clrAccent}" stroke-width="1.5"/>
+
+                <path d="${arcPath(Ax, Ay, dAC, dAB, R, 1)}"
+                    fill="none" stroke="${clrAccent}" stroke-width="1.5"/>
+
+                <text x="${αLx}" y="${αLy}"
+                    font-family="${font}" font-size="12" font-weight="700"
+                    fill="${clrAccent}" text-anchor="middle">
+                    &#945; = ${fmt(alphaDeg, 2)}&#176;
+                </text>
+                <text x="${βLx}" y="${βLy}"
+                    font-family="${font}" font-size="12" font-weight="700"
+                    fill="${clrAccent}" text-anchor="middle">
+                    &#946; = ${fmt(betaDeg, 2)}&#176;
+                </text>
+                <text x="${Bx + RR + 4}" y="${By - RR - 4}"
+                    font-family="${font}" font-size="11" fill="${clrMuted}">
+                    90&#176;
+                </text>
+
+                <text x="${vertLx}" y="${vertLy}"
+                    font-family="${font}" font-size="12" fill="${clrMuted}"
+                    text-anchor="end" dominant-baseline="middle">
+                    ${fmtS(v)}
+                </text>
+                <text x="${horizLx}" y="${horizLy}"
+                    font-family="${font}" font-size="12" fill="${clrMuted}"
+                    text-anchor="middle">
+                    ${fmtS(h)}
+                </text>
+                <text x="${hypLx}" y="${hypLy}"
+                    font-family="${font}" font-size="12" fill="${clrMuted}"
+                    text-anchor="middle">
+                    ${fmtS(hyp)}
+                </text>
+            `;
+
+            document.getElementById('svgPlaceholder').style.display = 'none';
+            document.getElementById('triSvg').style.display = '';
+        }
+
+        // Redraw on theme toggle so SVG color variables update
+        new MutationObserver(() => {
+            if (document.getElementById('triSvg').style.display !== 'none') calculate();
+        }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    </script>
+
+</body>
+</html>
