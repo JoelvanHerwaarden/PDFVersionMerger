@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nobleo | Pagina Formaat Analyser</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <link rel="stylesheet" href="../../shared/style.css">
+    <style>
+        .container { max-width: 900px; }
+
+        /* Upload zones */
+        .upload-zone {
+            background: var(--container-bg);
+            border: 2px dashed var(--border-color);
+            border-radius: 20px;
+            padding: 2rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            position: relative;
+            margin-bottom: 1rem;
+        }
+        .upload-zone:hover, .upload-zone.drag-active {
+            border-color: var(--button-bg);
+            background: var(--card-bg);
+        }
+        .upload-zone input[type="file"] {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer;
+            width: 100%; height: 100%; border: none; padding: 0;
+        }
+        .upload-zone-icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+        .upload-zone-label { font-size: 0.95rem; font-weight: 600; color: var(--text-main); display: block; margin-bottom: 0.2rem; }
+        .upload-zone-sub { font-size: 0.78rem; color: var(--text-muted); }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        @media (max-width: 600px) { .upload-grid { grid-template-columns: 1fr; } }
+
+        .folder-btn {
+            width: 100%; padding: 0.75rem 1rem;
+            background: var(--container-bg); border: 1px solid var(--border-color);
+            border-radius: 12px; color: var(--text-main); font-size: 0.88rem;
+            cursor: pointer; transition: border-color 0.2s, background 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .folder-btn:hover { border-color: var(--button-bg); background: var(--card-bg); }
+
+        /* Status bar */
+        #analyseStatus {
+            font-size: 0.85rem; color: var(--text-muted);
+            min-height: 1.4em; margin-top: 0.5rem; text-align: center;
+        }
+
+        /* Summary badges */
+        #summaryBar {
+            display: none;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 1rem 0;
+            align-items: center;
+        }
+        .size-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 13px; border-radius: 20px;
+            font-size: 0.78rem; font-weight: 700;
+            border: 2px solid;
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
+            user-select: none;
+        }
+        .size-badge:hover { opacity: 0.75; transform: scale(1.04); }
+        .size-badge .dot {
+            width: 9px; height: 9px; border-radius: 50%;
+            background: currentColor; flex-shrink: 0;
+        }
+        .badge-total {
+            font-size: 0.78rem; color: var(--text-muted);
+            margin-left: 4px;
+        }
+
+        /* Chart section */
+        #chartSection { display: none; margin-top: 1.5rem; }
+
+        .view-tabs {
+            display: flex; gap: 6px; margin-bottom: 1rem;
+        }
+
+        #chartWrap {
+            position: relative;
+            width: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            margin-bottom: 1rem;
+        }
+        #scatterCanvas, #timelineCanvas {
+            display: block;
+            width: 100%;
+        }
+        #brushCanvas, #timelineBrushCanvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            cursor: crosshair;
+            pointer-events: all;
+        }
+        #timelineWrap {
+            position: relative;
+            width: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        /* Tooltip */
+        #chartTooltip {
+            position: fixed;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 0.78rem;
+            color: var(--text-main);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+            z-index: 100;
+            max-width: 240px;
+            box-shadow: 0 4px 16px var(--shadow);
+            line-height: 1.5;
+        }
+
+        /* Quick-select + merge */
+        #selectionPanel {
+            display: none;
+            background: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.2rem 1.4rem;
+            margin-top: 0.5rem;
+        }
+        .quickselect-row {
+            display: flex; flex-wrap: wrap; gap: 6px;
+            margin-bottom: 1rem;
+        }
+        #selectionCount {
+            font-size: 0.88rem; color: var(--text-muted);
+            margin-bottom: 1rem; display: block;
+        }
+        #mergeStatus {
+            margin-top: 0.75rem; font-size: 0.88rem;
+            font-weight: 500; min-height: 1.2em;
+        }
+
+        /* Reset button */
+        #resetBtn {
+            display: none;
+            margin-top: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-controls">
+        <a href="../../" class="btn-small">← Terug</a>
+        <a href="https://github.com/JoelvanHerwaarden/PDFVersionMerger" target="_blank" class="github-link" title="Broncode">
+            <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" alt="GitHub" class="github-icon">
+        </a>
+        <button class="btn-small" onclick="toggleTheme()" id="themeBtn">Mode</button>
+    </div>
+
+    <img src="https://www.nobleo-infra.nl/wp-content/uploads/2025/02/Nobleo_BI_Logo_RGB.png.webp" alt="Logo" class="logo">
+
+    <div class="container">
+        <h2>Pagina Formaat Analyser</h2>
+        <div class="description-box">
+            <p>Upload een PDF of selecteer een map met PDF's en afbeeldingen. De tool analyseert de paginaformaten en visualiseert ze in een interactieve grafiek. Selecteer pagina's via de grafiek en download ze als nieuwe PDF.</p>
+        </div>
+
+        <div class="form-card">
+            <div class="upload-grid">
+                <div class="upload-zone" id="uploadZone">
+                    <input type="file" id="fileInput" accept="application/pdf,image/jpeg,image/png" multiple>
+                    <span class="upload-zone-icon">📄</span>
+                    <span class="upload-zone-label">PDF's of afbeeldingen</span>
+                    <span class="upload-zone-sub">Klik of sleep bestanden · PDF, JPG, PNG</span>
+                </div>
+                <div class="upload-zone" id="folderZone" style="cursor:pointer;" onclick="document.getElementById('folderInput').click()">
+                    <input type="file" id="folderInput" webkitdirectory multiple style="display:none">
+                    <span class="upload-zone-icon">📁</span>
+                    <span class="upload-zone-label">Map selecteren</span>
+                    <span class="upload-zone-sub">Zoekt automatisch in submappen · PDF, JPG, PNG</span>
+                </div>
+            </div>
+
+            <div id="analyseStatus"></div>
+
+            <div id="summaryBar"></div>
+
+            <div id="chartSection">
+                <div class="view-tabs">
+                    <button class="btn-small active-toggle" id="tabScatter" onclick="switchView('scatter')">Spreiding</button>
+                    <button class="btn-small" id="tabTimeline" onclick="switchView('timeline')">Tijdlijn</button>
+                    <span style="flex:1"></span>
+                    <button class="btn-small" id="resetBtn" onclick="resetTool()" style="display:none">Opnieuw beginnen</button>
+                </div>
+
+                <!-- Scatter view -->
+                <div id="chartWrap">
+                    <canvas id="scatterCanvas" height="480"></canvas>
+                    <canvas id="brushCanvas"></canvas>
+                </div>
+
+                <!-- Timeline view -->
+                <div id="timelineWrap">
+                    <canvas id="timelineCanvas" height="320"></canvas>
+                    <canvas id="timelineBrushCanvas"></canvas>
+                </div>
+
+                <div id="selectionPanel">
+                    <div class="quickselect-row">
+                        <button class="btn-small" onclick="quickSelect('all')">Alles selecteren</button>
+                        <button class="btn-small" id="btnA4"    onclick="quickSelect('a4')">Alles A4</button>
+                        <button class="btn-small" id="btnA3p"   onclick="quickSelect('a3plus')">Alles A3+</button>
+                        <button class="btn-small" id="btnGtA3"  onclick="quickSelect('gt-a3')">Groter dan A3</button>
+                        <button class="btn-small" id="btnUnknown" onclick="quickSelect('unknown')">Onbekend formaat</button>
+                        <button class="btn-small" onclick="quickSelect('invert')">Selectie omkeren</button>
+                        <button class="btn-small" onclick="quickSelect('none')">Deselecteren</button>
+                    </div>
+                    <span id="selectionCount">0 pagina's geselecteerd</span>
+                    <button class="main-btn" id="downloadBtn" onclick="downloadSelection()" disabled>
+                        ⬇️ Geselecteerde pagina's downloaden als PDF
+                    </button>
+                    <div id="mergeStatus"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="chartTooltip"></div>
+
+    <footer>
+        <div>&copy; 2026 <a href="https://www.nobleo-infra.nl/" target="_blank">Nobleo Bouw en Infra</a></div>
+    </footer>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // ── Theme ──
+        function setTheme(t) {
+            document.documentElement.setAttribute('data-theme', t);
+            localStorage.setItem('theme', t);
+            document.getElementById('themeBtn').innerText = t === 'dark' ? '☀️ Light' : '🌙 Dark';
+        }
+        function toggleTheme() {
+            setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+            if (pages.length) { drawScatter(); drawTimeline(); }
+        }
+        setTheme(localStorage.getItem('theme') || 'light');
+
+        // ── State ──
+        let pages = [];
+        let sourceFiles = [];
+        let activeView = 'scatter';
+
+        // ── Paper size definitions (portrait w×h in mm) ──
+        const SIZES = [
+            { key: 'A4',  w: 210,  h: 297,  color: '#4CAF50' },
+            { key: 'A3',  w: 297,  h: 420,  color: '#2196F3' },
+            { key: 'A2',  w: 420,  h: 594,  color: '#FF9800' },
+            { key: 'A1',  w: 594,  h: 841,  color: '#9C27B0' },
+            { key: 'A0',  w: 841,  h: 1189, color: '#F44336' },
+        ];
+        const TOLERANCE = 3;
+        const COLOR_UNKNOWN = '#9E9E9E';
+
+        function classifyPage(w, h) {
+            for (const s of SIZES) {
+                // portrait
+                if (Math.abs(w - s.w) <= TOLERANCE && Math.abs(h - s.h) <= TOLERANCE)
+                    return { category: s.key, color: s.color };
+                // landscape
+                if (Math.abs(w - s.h) <= TOLERANCE && Math.abs(h - s.w) <= TOLERANCE)
+                    return { category: s.key + '-liggend', color: s.color };
+            }
+            return { category: 'Onbekend', color: COLOR_UNKNOWN };
+        }
+
+        function ptToMm(pts) { return Math.round(pts * 25.4 / 72 * 10) / 10; }
+
+        // ── File ingestion ──
+        const fileInput   = document.getElementById('fileInput');
+        const folderInput = document.getElementById('folderInput');
+        const uploadZone  = document.getElementById('uploadZone');
+
+        fileInput.addEventListener('change', () => startAnalysis(fileInput.files));
+        folderInput.addEventListener('change', () => { startAnalysis(folderInput.files); folderInput.value = ''; });
+
+        uploadZone.addEventListener('dragenter', e => { e.preventDefault(); uploadZone.classList.add('drag-active'); });
+        uploadZone.addEventListener('dragleave', e => { if (!uploadZone.contains(e.relatedTarget)) uploadZone.classList.remove('drag-active'); });
+        uploadZone.addEventListener('dragover',  e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+        uploadZone.addEventListener('drop', e => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-active');
+            if (e.dataTransfer.files.length) startAnalysis(e.dataTransfer.files);
+        });
+
+        function filterFiles(fileList) {
+            const ACCEPTED = ['application/pdf', 'image/jpeg', 'image/png'];
+            return Array.from(fileList)
+                .filter(f => ACCEPTED.includes(f.type))
+                .sort((a, b) => (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name));
+        }
+
+        async function startAnalysis(fileList) {
+            const files = filterFiles(fileList);
+            if (!files.length) return;
+
+            pages = [];
+            sourceFiles = [];
+            document.getElementById('chartSection').style.display = 'none';
+            document.getElementById('summaryBar').style.display = 'none';
+            document.getElementById('selectionPanel').style.display = 'none';
+            document.getElementById('resetBtn').style.display = 'none';
+            document.getElementById('mergeStatus').textContent = '';
+
+            const total = files.length;
+            for (let i = 0; i < files.length; i++) {
+                const f = files[i];
+                const fileIndex = sourceFiles.length;
+                const entry = { file: f, type: f.type === 'application/pdf' ? 'pdf' : 'image', pdfDoc: null };
+                sourceFiles.push(entry);
+
+                document.getElementById('analyseStatus').textContent =
+                    `Analyseren ${i + 1} van ${total}: ${f.webkitRelativePath || f.name}`;
+
+                try {
+                    if (entry.type === 'pdf') await extractPdfPages(entry, fileIndex);
+                    else                       await extractImagePage(entry, fileIndex);
+                } catch (e) {
+                    pages.push({
+                        id: pages.length, fileIndex, pageIndex: 0,
+                        fileName: f.webkitRelativePath || f.name, fileType: entry.type,
+                        pageLabel: 'Fout', widthMm: 0, heightMm: 0,
+                        isLandscape: false, category: 'Fout', color: '#e55', selected: false
+                    });
+                }
+
+                // Yield to keep UI responsive on large folder scans
+                await new Promise(r => setTimeout(r, 0));
+            }
+
+            document.getElementById('analyseStatus').textContent =
+                `${pages.length} pagina's geanalyseerd uit ${total} bestand${total !== 1 ? 'en' : ''}.`;
+
+            renderSummaryBadges();
+            document.getElementById('summaryBar').style.display = 'flex';
+            document.getElementById('chartSection').style.display = 'block';
+            document.getElementById('selectionPanel').style.display = 'block';
+            document.getElementById('resetBtn').style.display = 'inline-block';
+
+            initCharts();
+            updateSelectionUI();
+        }
+
+        async function extractPdfPages(entry, fileIndex) {
+            const buf = await entry.file.arrayBuffer();
+            const doc = await pdfjsLib.getDocument({ data: buf }).promise;
+            entry.pdfDoc = doc;
+            const fileName = entry.file.webkitRelativePath || entry.file.name;
+            for (let i = 0; i < doc.numPages; i++) {
+                const page = await doc.getPage(i + 1);
+                const vp = page.getViewport({ scale: 1 });
+                const wMm = ptToMm(vp.width);
+                const hMm = ptToMm(vp.height);
+                const { category, color } = classifyPage(wMm, hMm);
+                pages.push({
+                    id: pages.length, fileIndex, pageIndex: i,
+                    fileName, fileType: 'pdf',
+                    pageLabel: `Pagina ${i + 1}`,
+                    widthMm: wMm, heightMm: hMm,
+                    isLandscape: wMm > hMm, category, color, selected: false
+                });
+            }
+        }
+
+        async function extractImagePage(entry, fileIndex) {
+            const fileName = entry.file.webkitRelativePath || entry.file.name;
+            const { w, h } = await new Promise((resolve, reject) => {
+                const img = new Image();
+                const url = URL.createObjectURL(entry.file);
+                img.onload  = () => { URL.revokeObjectURL(url); resolve({ w: img.naturalWidth, h: img.naturalHeight }); };
+                img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+                img.src = url;
+            });
+            // 96 dpi assumption for display-resolution files; approximate
+            const wMm = Math.round(w * 25.4 / 96 * 10) / 10;
+            const hMm = Math.round(h * 25.4 / 96 * 10) / 10;
+            const { category, color } = classifyPage(wMm, hMm);
+            pages.push({
+                id: pages.length, fileIndex, pageIndex: 0,
+                fileName, fileType: entry.file.type === 'image/jpeg' ? 'jpg' : 'png',
+                pageLabel: 'Afbeelding',
+                widthMm: wMm, heightMm: hMm,
+                isLandscape: wMm > hMm, category, color, selected: false
+            });
+        }
+
+        // ── Summary badges ──
+        function renderSummaryBadges() {
+            const bar = document.getElementById('summaryBar');
+            const counts = {};
+            for (const p of pages) counts[p.category] = (counts[p.category] || 0) + 1;
+
+            const order = SIZES.map(s => s.key)
+                .flatMap(k => [k, k + '-liggend'])
+                .concat(['Onbekend', 'Fout', 'Beveiligd']);
+
+            bar.innerHTML = '';
+            for (const cat of order) {
+                if (!counts[cat]) continue;
+                const p0 = pages.find(p => p.category === cat);
+                const color = p0 ? p0.color : COLOR_UNKNOWN;
+                const span = document.createElement('span');
+                span.className = 'size-badge';
+                span.style.color = color;
+                span.style.borderColor = color;
+                span.title = `Klik om alle ${cat} pagina's te selecteren`;
+                span.innerHTML = `<span class="dot"></span>${cat} <strong>${counts[cat]}</strong>`;
+                span.addEventListener('click', () => {
+                    pages.forEach(p => p.selected = (p.category === cat));
+                    drawActiveView();
+                    updateSelectionUI();
+                });
+                bar.appendChild(span);
+            }
+            const total = document.createElement('span');
+            total.className = 'badge-total';
+            total.textContent = `${pages.length} pagina's totaal`;
+            bar.appendChild(total);
+        }
+
+        // ── Chart layout ──
+        const PAD = { top: 20, right: 20, bottom: 48, left: 64 };
+
+        function buildLayout(canvas) {
+            const dpr = window.devicePixelRatio || 1;
+            const cssW = canvas.offsetWidth || canvas.width / dpr;
+            const cssH = canvas.height / dpr;
+            const plotW = cssW - PAD.left - PAD.right;
+            const plotH = cssH - PAD.top - PAD.bottom;
+
+            const maxW = Math.max(...pages.map(p => p.widthMm),  300) * 1.08;
+            const maxH = Math.max(...pages.map(p => p.heightMm), 300) * 1.08;
+
+            return {
+                cssW, cssH, plotW, plotH,
+                maxW, maxH,
+                toCanvas(wMm, hMm) {
+                    return {
+                        cx: PAD.left + (wMm / maxW) * plotW,
+                        cy: PAD.top  + plotH - (hMm / maxH) * plotH
+                    };
+                },
+                fromCanvas(cx, cy) {
+                    return {
+                        wMm: ((cx - PAD.left) / plotW) * maxW,
+                        hMm: ((PAD.top + plotH - cy) / plotH) * maxH
+                    };
+                }
+            };
+        }
+
+        function buildTimelineLayout(canvas) {
+            const dpr = window.devicePixelRatio || 1;
+            const cssW = canvas.offsetWidth || canvas.width / dpr;
+            const cssH = canvas.height / dpr;
+            const plotW = cssW - PAD.left - PAD.right;
+            const plotH = cssH - PAD.top - PAD.bottom;
+            const maxDim = Math.max(...pages.map(p => Math.max(p.widthMm, p.heightMm)), 300) * 1.08;
+            const n = pages.length;
+
+            return {
+                cssW, cssH, plotW, plotH, maxDim, n,
+                toCanvas(idx, dimMm) {
+                    const barW = plotW / n;
+                    const cx = PAD.left + (idx + 0.5) * barW;
+                    const cy = PAD.top + plotH - (dimMm / maxDim) * plotH;
+                    return { cx, cy, barW };
+                },
+                fromCanvas(cx, cy) {
+                    const idx  = Math.floor(((cx - PAD.left) / plotW) * n);
+                    const dimMm = ((PAD.top + plotH - cy) / plotH) * maxDim;
+                    return { idx: Math.max(0, Math.min(n - 1, idx)), dimMm };
+                }
+            };
+        }
+
+        // ── Canvas DPR helper ──
+        function setupCanvas(canvas) {
+            const dpr = window.devicePixelRatio || 1;
+            const cssW = canvas.parentElement.clientWidth || 800;
+            const cssH = parseInt(canvas.getAttribute('height')) || 480;
+            canvas.width  = Math.round(cssW * dpr);
+            canvas.height = Math.round(cssH * dpr);
+            canvas.style.width  = cssW + 'px';
+            canvas.style.height = cssH + 'px';
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            return ctx;
+        }
+
+        function getCSSVar(name) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        }
+
+        // ── Draw scatter ──
+        function drawScatter() {
+            const canvas = document.getElementById('scatterCanvas');
+            const ctx    = setupCanvas(canvas);
+            const lay    = buildLayout(canvas);
+            syncBrushCanvas('brushCanvas', canvas);
+
+            const textColor   = getCSSVar('--text-main');
+            const mutedColor  = getCSSVar('--text-muted');
+            const borderColor = getCSSVar('--border-color');
+
+            ctx.clearRect(0, 0, lay.cssW, lay.cssH);
+
+            // Grid lines at standard size boundaries
+            ctx.save();
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = 1;
+            ctx.font = '10px system-ui';
+            ctx.fillStyle = mutedColor;
+            ctx.textAlign = 'center';
+
+            for (const s of SIZES) {
+                // Vertical lines (width boundaries)
+                for (const dim of [s.w, s.h]) {
+                    if (dim > lay.maxW * 0.95) continue;
+                    const { cx } = lay.toCanvas(dim, 0);
+                    ctx.beginPath(); ctx.moveTo(cx, PAD.top); ctx.lineTo(cx, PAD.top + lay.plotH);
+                    ctx.stroke();
+                    ctx.fillText(dim + ' mm', cx, lay.cssH - PAD.bottom + 14);
+                }
+                // Horizontal lines (height boundaries)
+                for (const dim of [s.w, s.h]) {
+                    if (dim > lay.maxH * 0.95) continue;
+                    const { cy } = lay.toCanvas(0, dim);
+                    ctx.beginPath(); ctx.moveTo(PAD.left, cy); ctx.lineTo(PAD.left + lay.plotW, cy);
+                    ctx.stroke();
+                    ctx.textAlign = 'right';
+                    ctx.fillText(dim, PAD.left - 6, cy + 4);
+                    ctx.textAlign = 'center';
+                }
+            }
+            ctx.restore();
+
+            // Axis labels
+            ctx.save();
+            ctx.fillStyle = textColor;
+            ctx.font = '11px system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillText('Breedte (mm)', PAD.left + lay.plotW / 2, lay.cssH - 6);
+            ctx.save();
+            ctx.translate(14, PAD.top + lay.plotH / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('Hoogte (mm)', 0, 0);
+            ctx.restore();
+            ctx.restore();
+
+            // Plot border
+            ctx.save();
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(PAD.left, PAD.top, lay.plotW, lay.plotH);
+            ctx.restore();
+
+            // Cluster detection: group points within 6px of each other
+            const drawn = [];
+            function getCluster(cx, cy) {
+                return drawn.find(d => Math.hypot(d.cx - cx, d.cy - cy) < 6);
+            }
+
+            // Draw unselected first, then selected on top
+            const unsel = pages.filter(p => !p.selected);
+            const sel   = pages.filter(p =>  p.selected);
+
+            for (const group of [unsel, sel]) {
+                for (const p of group) {
+                    if (p.widthMm === 0 && p.heightMm === 0) continue;
+                    const { cx, cy } = lay.toCanvas(p.widthMm, p.heightMm);
+                    const cluster = getCluster(cx, cy);
+                    if (cluster) { cluster.count++; continue; }
+                    drawn.push({ cx, cy, p, count: 1 });
+                }
+            }
+
+            for (const { cx, cy, p, count } of drawn) {
+                const r = p.selected ? 7 : 5;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+                if (p.selected) {
+                    ctx.strokeStyle = getCSSVar('--bg-color') || '#fff';
+                    ctx.lineWidth = 2.5;
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r + 2.5, 0, Math.PI * 2);
+                    ctx.strokeStyle = p.color;
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                }
+                if (count > 1) {
+                    ctx.fillStyle = textColor;
+                    ctx.font = 'bold 9px system-ui';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(count + '×', cx, cy - r - 3);
+                }
+            }
+        }
+
+        // ── Draw timeline ──
+        function drawTimeline() {
+            if (!pages.length) return;
+            const canvas = document.getElementById('timelineCanvas');
+            const ctx    = setupCanvas(canvas);
+            const lay    = buildTimelineLayout(canvas);
+            syncBrushCanvas('timelineBrushCanvas', canvas);
+
+            const textColor   = getCSSVar('--text-main');
+            const mutedColor  = getCSSVar('--text-muted');
+            const borderColor = getCSSVar('--border-color');
+
+            ctx.clearRect(0, 0, lay.cssW, lay.cssH);
+
+            // Horizontal reference lines
+            ctx.save();
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = 1;
+            ctx.font = '10px system-ui';
+            ctx.fillStyle = mutedColor;
+            ctx.textAlign = 'right';
+            for (const s of SIZES) {
+                for (const dim of [s.w, s.h]) {
+                    if (dim > lay.maxDim * 0.95) continue;
+                    const { cy } = lay.toCanvas(0, dim);
+                    ctx.beginPath(); ctx.moveTo(PAD.left, cy); ctx.lineTo(PAD.left + lay.plotW, cy); ctx.stroke();
+                    ctx.fillText(dim, PAD.left - 5, cy + 4);
+                }
+            }
+            ctx.restore();
+
+            // Bars
+            const barW = Math.max(2, (lay.plotW / lay.n) - 1);
+            for (let i = 0; i < pages.length; i++) {
+                const p = pages[i];
+                const dim = Math.max(p.widthMm, p.heightMm);
+                const { cx, cy } = lay.toCanvas(i, dim);
+                const barH = (PAD.top + lay.plotH) - cy;
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.selected ? 1 : 0.55;
+                ctx.fillRect(cx - barW / 2, cy, barW, barH);
+                if (p.selected) {
+                    ctx.strokeStyle = getCSSVar('--bg-color') || '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(cx - barW / 2, cy, barW, barH);
+                }
+            }
+            ctx.globalAlpha = 1;
+
+            // Axis
+            ctx.save();
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(PAD.left, PAD.top, lay.plotW, lay.plotH);
+            ctx.fillStyle = textColor;
+            ctx.font = '11px system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillText('Paginavolgorde', PAD.left + lay.plotW / 2, lay.cssH - 6);
+            ctx.save();
+            ctx.translate(14, PAD.top + lay.plotH / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('Langste zijde (mm)', 0, 0);
+            ctx.restore();
+            ctx.restore();
+        }
+
+        function drawActiveView() {
+            if (activeView === 'scatter') drawScatter();
+            else drawTimeline();
+        }
+
+        function syncBrushCanvas(brushId, refCanvas) {
+            const bc = document.getElementById(brushId);
+            bc.width  = refCanvas.width;
+            bc.height = refCanvas.height;
+            bc.style.width  = refCanvas.style.width;
+            bc.style.height = refCanvas.style.height;
+        }
+
+        // ── View tabs ──
+        function switchView(v) {
+            activeView = v;
+            document.getElementById('tabScatter').classList.toggle('active-toggle', v === 'scatter');
+            document.getElementById('tabTimeline').classList.toggle('active-toggle', v === 'timeline');
+            document.getElementById('chartWrap').style.display    = v === 'scatter'  ? 'block' : 'none';
+            document.getElementById('timelineWrap').style.display = v === 'timeline' ? 'block' : 'none';
+            drawActiveView();
+        }
+
+        // ── Chart init ──
+        function initCharts() {
+            document.getElementById('chartWrap').style.display    = 'block';
+            document.getElementById('timelineWrap').style.display = 'none';
+            activeView = 'scatter';
+            document.getElementById('tabScatter').classList.add('active-toggle');
+            document.getElementById('tabTimeline').classList.remove('active-toggle');
+
+            drawScatter();
+            drawTimeline();
+
+            setupBrush('brushCanvas',         'scatter');
+            setupBrush('timelineBrushCanvas', 'timeline');
+            setupTooltip('brushCanvas',         'scatter');
+            setupTooltip('timelineBrushCanvas', 'timeline');
+        }
+
+        // ── Brush selection ──
+        function setupBrush(canvasId, viewType) {
+            const bc = document.getElementById(canvasId);
+            let brushing = false, start = {}, end = {};
+
+            bc.addEventListener('mousedown', e => {
+                brushing = true;
+                const r = bc.getBoundingClientRect();
+                start = { x: e.clientX - r.left, y: e.clientY - r.top };
+                end = { ...start };
+            });
+
+            bc.addEventListener('mousemove', e => {
+                if (!brushing) return;
+                const r = bc.getBoundingClientRect();
+                end = { x: e.clientX - r.left, y: e.clientY - r.top };
+                drawBrushRect(bc, start, end);
+            });
+
+            bc.addEventListener('mouseup', e => {
+                if (!brushing) return;
+                brushing = false;
+                clearBrushCanvas(bc);
+                const r = bc.getBoundingClientRect();
+                end = { x: e.clientX - r.left, y: e.clientY - r.top };
+                applyBrush(start, end, e.shiftKey, viewType, bc);
+            });
+
+            bc.addEventListener('mouseleave', () => {
+                if (brushing) { brushing = false; clearBrushCanvas(bc); }
+            });
+        }
+
+        function drawBrushRect(bc, s, e) {
+            const dpr = window.devicePixelRatio || 1;
+            const ctx = bc.getContext('2d');
+            ctx.clearRect(0, 0, bc.width, bc.height);
+            ctx.save();
+            ctx.scale(dpr, dpr);
+            const x = Math.min(s.x, e.x), y = Math.min(s.y, e.y);
+            const w = Math.abs(e.x - s.x),  h = Math.abs(e.y - s.y);
+            ctx.fillStyle = 'rgba(57, 214, 178, 0.12)';
+            ctx.fillRect(x, y, w, h);
+            ctx.strokeStyle = '#39d6b2';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 3]);
+            ctx.strokeRect(x, y, w, h);
+            ctx.restore();
+        }
+
+        function clearBrushCanvas(bc) {
+            bc.getContext('2d').clearRect(0, 0, bc.width, bc.height);
+        }
+
+        function applyBrush(s, e, additive, viewType, bc) {
+            const dx = Math.abs(e.x - s.x), dy = Math.abs(e.y - s.y);
+
+            if (dx < 5 && dy < 5) {
+                // Click — toggle nearest point
+                handleClick(s.x, s.y, additive, viewType);
+            } else {
+                const refCanvas = viewType === 'scatter'
+                    ? document.getElementById('scatterCanvas')
+                    : document.getElementById('timelineCanvas');
+
+                if (!additive) pages.forEach(p => p.selected = false);
+
+                if (viewType === 'scatter') {
+                    const lay = buildLayout(refCanvas);
+                    const x1 = Math.min(s.x, e.x), x2 = Math.max(s.x, e.x);
+                    const y1 = Math.min(s.y, e.y), y2 = Math.max(s.y, e.y);
+                    const { wMm: wMin, hMm: hMax } = lay.fromCanvas(x1, y1);
+                    const { wMm: wMax, hMm: hMin } = lay.fromCanvas(x2, y2);
+                    pages.forEach(p => {
+                        if (p.widthMm >= wMin && p.widthMm <= wMax &&
+                            p.heightMm >= hMin && p.heightMm <= hMax)
+                            p.selected = true;
+                    });
+                } else {
+                    const lay = buildTimelineLayout(refCanvas);
+                    const x1 = Math.min(s.x, e.x), x2 = Math.max(s.x, e.x);
+                    const y1 = Math.min(s.y, e.y), y2 = Math.max(s.y, e.y);
+                    const { idx: iMin, dimMm: dimMax } = lay.fromCanvas(x1, y1);
+                    const { idx: iMax, dimMm: dimMin } = lay.fromCanvas(x2, y2);
+                    pages.forEach((p, i) => {
+                        const dim = Math.max(p.widthMm, p.heightMm);
+                        if (i >= iMin && i <= iMax && dim >= dimMin && dim <= dimMax)
+                            p.selected = true;
+                    });
+                }
+            }
+
+            drawScatter();
+            drawTimeline();
+            updateSelectionUI();
+        }
+
+        function handleClick(cx, cy, additive, viewType) {
+            const refCanvas = viewType === 'scatter'
+                ? document.getElementById('scatterCanvas')
+                : document.getElementById('timelineCanvas');
+
+            let nearest = null, nearestDist = Infinity;
+
+            if (viewType === 'scatter') {
+                const lay = buildLayout(refCanvas);
+                for (const p of pages) {
+                    if (p.widthMm === 0 && p.heightMm === 0) continue;
+                    const { cx: px, cy: py } = lay.toCanvas(p.widthMm, p.heightMm);
+                    const d = Math.hypot(px - cx, py - cy);
+                    if (d < nearestDist) { nearestDist = d; nearest = p; }
+                }
+            } else {
+                const lay = buildTimelineLayout(refCanvas);
+                for (let i = 0; i < pages.length; i++) {
+                    const { cx: px } = lay.toCanvas(i, 0);
+                    const d = Math.abs(px - cx);
+                    if (d < nearestDist) { nearestDist = d; nearest = pages[i]; }
+                }
+            }
+
+            if (nearest && nearestDist < 20) {
+                if (!additive) pages.forEach(p => p.selected = false);
+                nearest.selected = !nearest.selected;
+            }
+        }
+
+        // ── Tooltip ──
+        function setupTooltip(canvasId, viewType) {
+            const bc = document.getElementById(canvasId);
+            const tt = document.getElementById('chartTooltip');
+
+            bc.addEventListener('mousemove', e => {
+                const r  = bc.getBoundingClientRect();
+                const mx = e.clientX - r.left;
+                const my = e.clientY - r.top;
+
+                const refCanvas = viewType === 'scatter'
+                    ? document.getElementById('scatterCanvas')
+                    : document.getElementById('timelineCanvas');
+
+                let nearest = null, nearestDist = Infinity;
+
+                if (viewType === 'scatter') {
+                    const lay = buildLayout(refCanvas);
+                    for (const p of pages) {
+                        if (p.widthMm === 0 && p.heightMm === 0) continue;
+                        const { cx, cy } = lay.toCanvas(p.widthMm, p.heightMm);
+                        const d = Math.hypot(cx - mx, cy - my);
+                        if (d < nearestDist) { nearestDist = d; nearest = p; }
+                    }
+                } else {
+                    const lay = buildTimelineLayout(refCanvas);
+                    for (let i = 0; i < pages.length; i++) {
+                        const { cx } = lay.toCanvas(i, 0);
+                        const d = Math.abs(cx - mx);
+                        if (d < nearestDist) { nearestDist = d; nearest = pages[i]; }
+                    }
+                }
+
+                if (nearest && nearestDist < 24) {
+                    tt.style.opacity = '1';
+                    tt.style.left = (e.clientX + 14) + 'px';
+                    tt.style.top  = (e.clientY - 10) + 'px';
+                    const name = nearest.fileName.length > 36
+                        ? '…' + nearest.fileName.slice(-34) : nearest.fileName;
+                    tt.innerHTML =
+                        `<strong>${nearest.pageLabel}</strong><br>` +
+                        `<span style="color:var(--text-muted)">${name}</span><br>` +
+                        `${nearest.widthMm} × ${nearest.heightMm} mm<br>` +
+                        `<span style="color:${nearest.color};font-weight:700">${nearest.category}</span>` +
+                        (nearest.fileType === 'jpg' || nearest.fileType === 'png'
+                            ? '<br><em style="color:var(--text-muted);font-size:0.72rem">Afmeting is schatting (96 dpi aanname)</em>'
+                            : '');
+                } else {
+                    tt.style.opacity = '0';
+                }
+            });
+
+            bc.addEventListener('mouseleave', () => { tt.style.opacity = '0'; });
+        }
+
+        // ── Quick select ──
+        function quickSelect(mode) {
+            const bigCats = new Set(SIZES.slice(2).flatMap(s => [s.key, s.key + '-liggend'])); // A2+
+            const a3pCats = new Set(SIZES.slice(1).flatMap(s => [s.key, s.key + '-liggend'])); // A3+
+
+            switch (mode) {
+                case 'all':     pages.forEach(p => p.selected = true); break;
+                case 'none':    pages.forEach(p => p.selected = false); break;
+                case 'invert':  pages.forEach(p => p.selected = !p.selected); break;
+                case 'a4':      pages.forEach(p => p.selected = p.category.startsWith('A4')); break;
+                case 'a3plus':  pages.forEach(p => p.selected = a3pCats.has(p.category)); break;
+                case 'gt-a3':   pages.forEach(p => p.selected = bigCats.has(p.category)); break;
+                case 'unknown': pages.forEach(p => p.selected = p.category === 'Onbekend'); break;
+            }
+            drawScatter();
+            drawTimeline();
+            updateSelectionUI();
+        }
+
+        function updateSelectionUI() {
+            const n = pages.filter(p => p.selected).length;
+            document.getElementById('selectionCount').textContent =
+                n === 0 ? 'Geen pagina\'s geselecteerd' :
+                n === 1 ? '1 pagina geselecteerd' :
+                `${n} pagina's geselecteerd`;
+            document.getElementById('downloadBtn').disabled = n === 0;
+
+            // Gray out quick-select buttons when no matches exist
+            const a3pCount  = pages.filter(p => ['A3','A3-liggend','A2','A2-liggend','A1','A1-liggend','A0','A0-liggend'].includes(p.category)).length;
+            const gtA3Count = pages.filter(p => ['A2','A2-liggend','A1','A1-liggend','A0','A0-liggend'].includes(p.category)).length;
+            const unknCount = pages.filter(p => p.category === 'Onbekend').length;
+            const a4Count   = pages.filter(p => p.category.startsWith('A4')).length;
+
+            document.getElementById('btnA4').disabled    = a4Count === 0;
+            document.getElementById('btnA3p').disabled   = a3pCount === 0;
+            document.getElementById('btnGtA3').disabled  = gtA3Count === 0;
+            document.getElementById('btnUnknown').disabled = unknCount === 0;
+        }
+
+        // ── Merge & download ──
+        async function downloadSelection() {
+            const selected = pages.filter(p => p.selected);
+            if (!selected.length) return;
+
+            const btn = document.getElementById('downloadBtn');
+            const status = document.getElementById('mergeStatus');
+            btn.disabled = true;
+            status.style.color = '';
+            status.textContent = '⏳ PDF wordt aangemaakt…';
+
+            try {
+                const { PDFDocument } = PDFLib;
+                const outPdf = await PDFDocument.create();
+
+                // Group selected by fileIndex, preserving page order
+                const byFile = new Map();
+                for (const p of selected) {
+                    if (!byFile.has(p.fileIndex)) byFile.set(p.fileIndex, []);
+                    byFile.get(p.fileIndex).push(p.pageIndex);
+                }
+                // Sort each file's pages ascending
+                for (const arr of byFile.values()) arr.sort((a, b) => a - b);
+
+                const fileIndices = [...byFile.keys()].sort((a, b) => a - b);
+                let processed = 0;
+
+                for (const fi of fileIndices) {
+                    processed++;
+                    const entry = sourceFiles[fi];
+                    status.textContent = `⏳ Bestand ${processed} van ${fileIndices.length} verwerken…`;
+
+                    const pageIndices = byFile.get(fi);
+                    const bytes = await entry.file.arrayBuffer();
+
+                    if (entry.type === 'pdf') {
+                        const srcPdf = await PDFDocument.load(bytes);
+                        const copied = await outPdf.copyPages(srcPdf, pageIndices);
+                        for (const pg of copied) outPdf.addPage(pg);
+                    } else {
+                        // image — one page per image
+                        const isJpeg = entry.file.type === 'image/jpeg';
+                        const img = isJpeg
+                            ? await outPdf.embedJpg(bytes)
+                            : await outPdf.embedPng(bytes);
+                        const pg = outPdf.addPage([img.width, img.height]);
+                        pg.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+                    }
+                }
+
+                const pdfBytes = await outPdf.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'Nobleo_Selectie.pdf';
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+
+                status.style.color = '#39d6b2';
+                status.textContent = `✓ PDF gedownload met ${selected.length} pagina's.`;
+            } catch (err) {
+                status.style.color = '#e55';
+                status.textContent = '✗ Fout bij aanmaken PDF: ' + err.message;
+                console.error(err);
+            } finally {
+                btn.disabled = pages.filter(p => p.selected).length === 0;
+            }
+        }
+
+        // ── Reset ──
+        function resetTool() {
+            pages = [];
+            sourceFiles = [];
+            document.getElementById('chartSection').style.display = 'none';
+            document.getElementById('summaryBar').style.display = 'none';
+            document.getElementById('selectionPanel').style.display = 'none';
+            document.getElementById('resetBtn').style.display = 'none';
+            document.getElementById('analyseStatus').textContent = '';
+            document.getElementById('mergeStatus').textContent = '';
+            fileInput.value = '';
+        }
+
+        // ── Responsive resize ──
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (pages.length) { drawScatter(); drawTimeline(); }
+            }, 150);
+        });
+    </script>
+</body>
+</html>
