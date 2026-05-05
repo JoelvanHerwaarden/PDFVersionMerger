@@ -6,6 +6,7 @@
     <title>Nobleo | PDF Samenvoegen</title>
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link rel="stylesheet" href="../../shared/style.css">
     <style>
         .upload-zone {
@@ -94,6 +95,112 @@
             border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; font-weight: 600;
             color: var(--text-muted); margin-bottom: 1rem;
         }
+
+        /* ── Watermark toggle row ── */
+        .option-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 4px; font-size: 0.88rem; color: var(--text-main);
+            cursor: pointer; user-select: none;
+        }
+        .option-row input[type="checkbox"] {
+            width: 16px; height: 16px; accent-color: var(--button-bg); cursor: pointer; flex-shrink: 0;
+        }
+
+        /* ── Watermark options panel ── */
+        .wm-panel {
+            background: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-top: 6px;
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .wm-row {
+            display: flex; align-items: center; gap: 12px;
+        }
+        .wm-label {
+            font-size: 0.75rem; font-weight: 700; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.04em;
+            min-width: 72px; flex-shrink: 0;
+        }
+
+        /* Position grid */
+        .pos-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 30px);
+            grid-template-rows: repeat(3, 30px);
+            gap: 3px;
+        }
+        .pos-btn {
+            width: 30px; height: 30px; padding: 0;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex; align-items: center; justify-content: center;
+            transition: border-color 0.15s, background 0.15s, color 0.15s;
+        }
+        .pos-btn:hover { border-color: var(--button-bg); color: var(--text-main); }
+        .pos-btn.active { background: var(--button-bg); color: var(--button-text); border-color: var(--button-bg); }
+        .pos-grid.disabled { opacity: 0.35; pointer-events: none; }
+
+        .diag-btn {
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: border-color 0.15s, background 0.15s, color 0.15s;
+            white-space: nowrap;
+            align-self: flex-end;
+        }
+        .diag-btn:hover { border-color: var(--button-bg); color: var(--text-main); }
+        .diag-btn.active { background: var(--button-bg); color: var(--button-text); border-color: var(--button-bg); }
+
+        /* Color swatches */
+        .color-swatches { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .color-dot {
+            width: 22px; height: 22px; border-radius: 50%;
+            cursor: pointer; flex-shrink: 0;
+            border: 2px solid transparent;
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            transition: outline-color 0.15s, transform 0.12s;
+            display: inline-block;
+        }
+        .color-dot:hover { transform: scale(1.15); }
+        .color-dot.active { outline-color: var(--text-main); }
+        #wmColorPicker {
+            width: 26px; height: 26px;
+            border: 1px solid var(--border-color); border-radius: 6px;
+            cursor: pointer; padding: 1px; background: none;
+            flex-shrink: 0;
+        }
+
+        /* Range sliders */
+        .wm-range { flex: 1; accent-color: var(--button-bg); cursor: pointer; height: 4px; }
+        .wm-val { font-size: 0.8rem; color: var(--text-muted); min-width: 46px; text-align: right; }
+
+        /* ── Download buttons ── */
+        .btn-group { display: flex; gap: 10px; margin-bottom: 0; }
+        .btn-group .main-btn { flex: 1; font-size: 0.88rem; padding: 0.85rem 1rem; }
+        .btn-secondary {
+            background: var(--container-bg) !important;
+            color: var(--text-main) !important;
+            border: 2px solid var(--border-color) !important;
+        }
+        .btn-secondary:not(:disabled):hover {
+            border-color: var(--button-bg) !important;
+            background: var(--card-bg) !important;
+        }
+        .btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -111,15 +218,15 @@
     <div class="container">
         <h2>PDF Samenvoegen</h2>
         <div class="description-box">
-            <p>Upload meerdere PDF-bestanden, orden ze via drag-and-drop en voeg ze samen tot één document. Originele paginaformaten blijven behouden.</p>
+            <p>Upload meerdere PDF-bestanden of afbeeldingen (JPG, PNG), orden ze via drag-and-drop en voeg ze samen tot één PDF. Originele paginaformaten blijven behouden.</p>
         </div>
 
         <div class="form-card">
             <div class="upload-zone" id="uploadZone">
-                <input type="file" id="fileInput" accept="application/pdf" multiple>
+                <input type="file" id="fileInput" accept="application/pdf,image/jpeg,image/png" multiple>
                 <span class="upload-zone-icon">📄</span>
-                <span class="upload-zone-label">Klik of sleep PDF-bestanden hiernaartoe</span>
-                <span class="upload-zone-sub">Meerdere bestanden tegelijk zijn ondersteund</span>
+                <span class="upload-zone-label">Klik of sleep bestanden hiernaartoe</span>
+                <span class="upload-zone-sub">PDF, JPG en PNG zijn ondersteund · Meerdere bestanden tegelijk</span>
             </div>
 
             <div id="fileCountWrap" style="display:none;">
@@ -134,9 +241,75 @@
                 <p class="empty-state" id="emptyState">Nog geen bestanden toegevoegd.</p>
             </div>
 
-            <button class="main-btn" onclick="mergePDFs()" id="mergeBtn" disabled>
-                ⬇️ Samenvoegen &amp; Downloaden
-            </button>
+            <!-- Watermark section (shown when files are added) -->
+            <div id="watermarkWrap" style="display:none;">
+                <label class="option-row" style="margin-bottom:0;">
+                    <input type="checkbox" id="watermarkToggle" onchange="toggleWatermarkPanel()">
+                    <span>Watermerk toevoegen aan elke pagina</span>
+                </label>
+
+                <div id="watermarkPanel" class="wm-panel" style="display:none;">
+
+                    <!-- Position -->
+                    <div class="wm-row" style="align-items:flex-start;">
+                        <span class="wm-label" style="padding-top:6px;">Positie</span>
+                        <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+                            <div class="pos-grid" id="posGrid">
+                                <button class="pos-btn" data-pos="top-left"      onclick="selectPosition(this)" title="Links boven">↖</button>
+                                <button class="pos-btn" data-pos="top-center"    onclick="selectPosition(this)" title="Midden boven">↑</button>
+                                <button class="pos-btn" data-pos="top-right"     onclick="selectPosition(this)" title="Rechts boven">↗</button>
+                                <button class="pos-btn" data-pos="middle-left"   onclick="selectPosition(this)" title="Links midden">←</button>
+                                <button class="pos-btn" data-pos="center"        onclick="selectPosition(this)" title="Gecentreerd">•</button>
+                                <button class="pos-btn" data-pos="middle-right"  onclick="selectPosition(this)" title="Rechts midden">→</button>
+                                <button class="pos-btn" data-pos="bottom-left"   onclick="selectPosition(this)" title="Links onder">↙</button>
+                                <button class="pos-btn" data-pos="bottom-center" onclick="selectPosition(this)" title="Midden onder">↓</button>
+                                <button class="pos-btn active" data-pos="bottom-right" onclick="selectPosition(this)" title="Rechts onder">↘</button>
+                            </div>
+                            <button class="diag-btn" id="diagBtn" onclick="toggleDiagonal()" title="Diagonaal over de pagina">╱ Diagonaal</button>
+                        </div>
+                    </div>
+
+                    <!-- Color -->
+                    <div class="wm-row">
+                        <span class="wm-label">Kleur</span>
+                        <div class="color-swatches">
+                            <span class="color-dot active" style="background:#555555;" onclick="selectColor('#555555',this)" title="Grijs"></span>
+                            <span class="color-dot"        style="background:#aaaaaa;" onclick="selectColor('#aaaaaa',this)" title="Lichtgrijs"></span>
+                            <span class="color-dot"        style="background:#cc2200;" onclick="selectColor('#cc2200',this)" title="Rood"></span>
+                            <span class="color-dot"        style="background:#0055cc;" onclick="selectColor('#0055cc',this)" title="Blauw"></span>
+                            <span class="color-dot"        style="background:#007744;" onclick="selectColor('#007744',this)" title="Groen"></span>
+                            <span class="color-dot"        style="background:#000000;" onclick="selectColor('#000000',this)" title="Zwart"></span>
+                        </div>
+                        <input type="color" id="wmColorPicker" value="#555555" title="Aangepaste kleur">
+                    </div>
+
+                    <!-- Size -->
+                    <div class="wm-row">
+                        <span class="wm-label">Grootte</span>
+                        <input type="range" id="wmSize" class="wm-range" min="6" max="96" value="12"
+                               oninput="document.getElementById('wmSizeVal').innerText = this.value">
+                        <span class="wm-val"><span id="wmSizeVal">12</span> pt</span>
+                    </div>
+
+                    <!-- Opacity -->
+                    <div class="wm-row">
+                        <span class="wm-label">Opaciteit</span>
+                        <input type="range" id="wmOpacity" class="wm-range" min="5" max="100" value="60"
+                               oninput="document.getElementById('wmOpacityVal').innerText = this.value">
+                        <span class="wm-val"><span id="wmOpacityVal">60</span>%</span>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="btn-group" style="margin-top: 1rem;">
+                <button class="main-btn" onclick="mergePDFs()" id="mergeBtn" disabled>
+                    ⬇️ PDF Downloaden
+                </button>
+                <button class="main-btn btn-secondary" onclick="downloadAsZip()" id="zipBtn" disabled>
+                    🗜️ Downloaden als .zip
+                </button>
+            </div>
             <div id="mergeStatus"></div>
         </div>
     </div>
@@ -150,7 +323,10 @@
 
         let uploadedFiles = [];
         let dragSrcIndex = null;
+        let wmDiagonal = false;
+        let wmPosition = 'bottom-right';
 
+        // ── Theme ──
         function setTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
             localStorage.setItem('theme', theme);
@@ -159,15 +335,14 @@
         function toggleTheme() { setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
         setTheme(localStorage.getItem('theme') || 'light');
 
-        // --- Upload zone ---
+        // ── Upload zone ──
         const uploadZone = document.getElementById('uploadZone');
-        const fileInput = document.getElementById('fileInput');
+        const fileInput  = document.getElementById('fileInput');
 
         fileInput.addEventListener('change', () => handleNewFiles(fileInput.files));
-
         uploadZone.addEventListener('dragenter', (e) => { e.preventDefault(); uploadZone.classList.add('drag-active'); });
         uploadZone.addEventListener('dragleave', (e) => { if (!uploadZone.contains(e.relatedTarget)) uploadZone.classList.remove('drag-active'); });
-        uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+        uploadZone.addEventListener('dragover',  (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
         uploadZone.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadZone.classList.remove('drag-active');
@@ -175,10 +350,18 @@
         });
 
         async function handleNewFiles(files) {
-            const pdfs = Array.from(files).filter(f => f.type === 'application/pdf');
-            if (!pdfs.length) return;
+            const accepted = Array.from(files).filter(f =>
+                f.type === 'application/pdf' || f.type === 'image/jpeg' || f.type === 'image/png'
+            );
+            if (!accepted.length) return;
 
-            const newEntries = pdfs.map(file => ({ file, pageCount: null, thumbDataUrl: null, id: Date.now() + Math.random() }));
+            const newEntries = accepted.map(file => ({
+                file,
+                type: file.type === 'application/pdf' ? 'pdf' : 'image',
+                pageCount: null,
+                thumbDataUrl: null,
+                id: Date.now() + Math.random()
+            }));
             uploadedFiles.push(...newEntries);
             renderFileList();
             updateMergeButton();
@@ -186,7 +369,8 @@
             fileInput.value = '';
 
             for (const entry of newEntries) {
-                await loadPDFMeta(entry);
+                if (entry.type === 'image') await loadImageMeta(entry);
+                else                         await loadPDFMeta(entry);
                 renderFileList();
                 updateStats();
             }
@@ -197,17 +381,23 @@
                 const buf = await entry.file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
                 entry.pageCount = pdf.numPages;
-
                 const page = await pdf.getPage(1);
                 const vp = page.getViewport({ scale: 0.25 });
                 const canvas = document.createElement('canvas');
-                canvas.width = Math.round(vp.width);
+                canvas.width  = Math.round(vp.width);
                 canvas.height = Math.round(vp.height);
                 await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
                 entry.thumbDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-            } catch (e) {
-                entry.pageCount = '?';
-            }
+            } catch (e) { entry.pageCount = '?'; }
+        }
+
+        async function loadImageMeta(entry) {
+            entry.pageCount = 1;
+            entry.thumbDataUrl = await new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.readAsDataURL(entry.file);
+            });
         }
 
         function removeFile(index) {
@@ -218,20 +408,26 @@
         }
 
         function updateMergeButton() {
-            document.getElementById('mergeBtn').disabled = uploadedFiles.length < 2;
+            const disabled = uploadedFiles.length < 2;
+            document.getElementById('mergeBtn').disabled = disabled;
+            document.getElementById('zipBtn').disabled   = disabled;
         }
 
         function updateStats() {
-            const wrap = document.getElementById('fileCountWrap');
-            if (uploadedFiles.length === 0) { wrap.style.display = 'none'; return; }
-            wrap.style.display = 'block';
+            const wrap         = document.getElementById('fileCountWrap');
+            const watermarkWrap = document.getElementById('watermarkWrap');
+            if (uploadedFiles.length === 0) {
+                wrap.style.display = watermarkWrap.style.display = 'none';
+                return;
+            }
+            wrap.style.display = watermarkWrap.style.display = 'block';
             document.getElementById('fileCountLabel').innerText = `${uploadedFiles.length} bestand${uploadedFiles.length !== 1 ? 'en' : ''}`;
             const totalPages = uploadedFiles.reduce((s, f) => s + (typeof f.pageCount === 'number' ? f.pageCount : 0), 0);
             document.getElementById('totalPageCountLabel').innerText = `${totalPages} pagina${totalPages !== 1 ? "'s" : ''}`;
         }
 
         function renderFileList() {
-            const list = document.getElementById('fileList');
+            const list  = document.getElementById('fileList');
             const empty = document.getElementById('emptyState');
 
             if (uploadedFiles.length === 0) {
@@ -241,8 +437,6 @@
                 return;
             }
             empty.style.display = 'none';
-
-            const existing = [...list.querySelectorAll('.file-card')];
             list.innerHTML = '';
 
             uploadedFiles.forEach((entry, index) => {
@@ -260,7 +454,11 @@
                     <div class="thumb-wrap">${thumbHtml}</div>
                     <div class="file-info">
                         <span class="file-name" title="${entry.file.name}">${entry.file.name}</span>
-                        <span class="file-pages">${entry.pageCount !== null ? `${entry.pageCount} pagina${entry.pageCount !== 1 ? "'s" : ''}` : 'Laden...'}</span>
+                        <span class="file-pages">${
+                            entry.pageCount === null  ? 'Laden...' :
+                            entry.type === 'image'    ? '🖼️ Afbeelding' :
+                            `${entry.pageCount} pagina${entry.pageCount !== 1 ? "'s" : ''}`
+                        }</span>
                     </div>
                     <div class="file-order-badge">${index + 1}</div>
                     <button class="remove-btn" title="Verwijder" onclick="removeFile(${index})">✕</button>
@@ -298,38 +496,182 @@
             });
         }
 
+        // ── Watermark UI ──
+        function toggleWatermarkPanel() {
+            const enabled = document.getElementById('watermarkToggle').checked;
+            document.getElementById('watermarkPanel').style.display = enabled ? 'flex' : 'none';
+        }
+
+        function selectPosition(btn) {
+            wmPosition = btn.dataset.pos;
+            wmDiagonal = false;
+            document.querySelectorAll('.pos-btn').forEach(b => b.classList.toggle('active', b === btn));
+            document.getElementById('diagBtn').classList.remove('active');
+            document.getElementById('posGrid').classList.remove('disabled');
+        }
+
+        function toggleDiagonal() {
+            wmDiagonal = !wmDiagonal;
+            document.getElementById('diagBtn').classList.toggle('active', wmDiagonal);
+            document.getElementById('posGrid').classList.toggle('disabled', wmDiagonal);
+            if (wmDiagonal) {
+                document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('active'));
+            }
+        }
+
+        function selectColor(hex, dot) {
+            document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+            dot.classList.add('active');
+            document.getElementById('wmColorPicker').value = hex;
+        }
+
+        // Deselect presets when the user picks a fully custom color
+        document.getElementById('wmColorPicker').addEventListener('input', () => {
+            document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+        });
+
+        // ── Watermark drawing helper ──
+        function applyWatermark(page, text, font) {
+            const { rgb, degrees } = PDFLib;
+            const { width, height } = page.getSize();
+            const size    = parseInt(document.getElementById('wmSize').value);
+            const opacity = parseInt(document.getElementById('wmOpacity').value) / 100;
+            const hex     = document.getElementById('wmColorPicker').value;
+            const [r, g, b] = [
+                parseInt(hex.slice(1, 3), 16) / 255,
+                parseInt(hex.slice(3, 5), 16) / 255,
+                parseInt(hex.slice(5, 7), 16) / 255,
+            ];
+            const textWidth = font.widthOfTextAtSize(text, size);
+            const margin    = Math.max(8, size * 0.5);
+
+            let x, y, rotate;
+
+            if (wmDiagonal) {
+                // Rotate 45° around anchor; offset anchor so visual center of text == page center
+                const c = Math.SQRT2 / 2; // cos(45°) = sin(45°)
+                x = width  / 2 - (textWidth / 2 - size / 2) * c;
+                y = height / 2 - (textWidth / 2 + size / 2) * c;
+                rotate = degrees(45);
+            } else {
+                rotate = degrees(0);
+                const positions = {
+                    'top-left':      [margin,                       height - size - margin],
+                    'top-center':    [(width - textWidth) / 2,      height - size - margin],
+                    'top-right':     [width - textWidth - margin,   height - size - margin],
+                    'middle-left':   [margin,                       (height - size) / 2   ],
+                    'center':        [(width - textWidth) / 2,      (height - size) / 2   ],
+                    'middle-right':  [width - textWidth - margin,   (height - size) / 2   ],
+                    'bottom-left':   [margin,                       margin                ],
+                    'bottom-center': [(width - textWidth) / 2,      margin                ],
+                    'bottom-right':  [width - textWidth - margin,   margin                ],
+                };
+                [x, y] = positions[wmPosition] ?? positions['bottom-right'];
+            }
+
+            page.drawText(text, {
+                x: Math.max(0, x),
+                y: Math.max(0, y),
+                size,
+                font,
+                color: rgb(r, g, b),
+                opacity,
+                rotate,
+            });
+        }
+
+        // ── Core PDF generation (shared by both download paths) ──
+        async function generateMergedPdfBytes(onProgress) {
+            const { PDFDocument, StandardFonts } = PDFLib;
+            const mergedPdf  = await PDFDocument.create();
+            const useWatermark = document.getElementById('watermarkToggle').checked;
+
+            let font;
+            if (useWatermark) {
+                font = await mergedPdf.embedFont(StandardFonts.Helvetica);
+            }
+
+            for (let i = 0; i < uploadedFiles.length; i++) {
+                const entry = uploadedFiles[i];
+                if (onProgress) onProgress(`⏳ Verwerking ${i + 1} van ${uploadedFiles.length}...`);
+                const bytes = await entry.file.arrayBuffer();
+
+                if (entry.type === 'image') {
+                    const img  = entry.file.type === 'image/jpeg'
+                        ? await mergedPdf.embedJpg(bytes)
+                        : await mergedPdf.embedPng(bytes);
+                    const page = mergedPdf.addPage([img.width, img.height]);
+                    page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+                    if (useWatermark) applyWatermark(page, entry.file.name, font);
+                } else {
+                    const srcPdf      = await PDFDocument.load(bytes);
+                    const copiedPages = await mergedPdf.copyPages(srcPdf, srcPdf.getPageIndices());
+                    for (const page of copiedPages) {
+                        mergedPdf.addPage(page);
+                        if (useWatermark) applyWatermark(page, entry.file.name, font);
+                    }
+                }
+            }
+
+            return mergedPdf.save();
+        }
+
+        function setButtonsBusy(busy) {
+            document.getElementById('mergeBtn').disabled = busy;
+            document.getElementById('zipBtn').disabled   = busy;
+        }
+
+        function resetButtons() {
+            updateMergeButton();
+            document.getElementById('mergeStatus').style.color = '';
+        }
+
         async function mergePDFs() {
             const statusEl = document.getElementById('mergeStatus');
-            const btn = document.getElementById('mergeBtn');
-            btn.disabled = true;
+            setButtonsBusy(true);
+            statusEl.style.color = '';
             statusEl.innerText = '⏳ Samenvoegen...';
-
             try {
-                const { PDFDocument } = PDFLib;
-                const mergedPdf = await PDFDocument.create();
-
-                for (let i = 0; i < uploadedFiles.length; i++) {
-                    statusEl.innerText = `⏳ Verwerking ${i + 1} van ${uploadedFiles.length}...`;
-                    const bytes = await uploadedFiles[i].file.arrayBuffer();
-                    const srcPdf = await PDFDocument.load(bytes);
-                    const pages = await mergedPdf.copyPages(srcPdf, srcPdf.getPageIndices());
-                    pages.forEach(page => mergedPdf.addPage(page));
-                }
-
-                const pdfBytes = await mergedPdf.save();
-                const a = Object.assign(document.createElement('a'), {
+                const pdfBytes = await generateMergedPdfBytes(msg => { statusEl.innerText = msg; });
+                Object.assign(document.createElement('a'), {
                     href: URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' })),
                     download: 'Nobleo_Samengevoegd.pdf'
-                });
-                a.click();
+                }).click();
                 statusEl.innerText = '✅ Klaar. Download gestart.';
                 statusEl.style.color = '#39d6b2';
             } catch (e) {
                 statusEl.innerText = '❌ Er is een fout opgetreden.';
                 console.error(e);
-            } finally {
-                btn.disabled = uploadedFiles.length < 2;
-            }
+            } finally { resetButtons(); }
+        }
+
+        async function downloadAsZip() {
+            const statusEl = document.getElementById('mergeStatus');
+            setButtonsBusy(true);
+            statusEl.style.color = '';
+            statusEl.innerText = '⏳ PDF samenvoegen...';
+            try {
+                const pdfBytes = await generateMergedPdfBytes(msg => { statusEl.innerText = msg; });
+
+                statusEl.innerText = '⏳ ZIP aanmaken...';
+                const zip          = new JSZip();
+                zip.file('Nobleo_Samengevoegd.pdf', pdfBytes);
+                const sourceFolder = zip.folder('Source Files');
+                for (const entry of uploadedFiles) {
+                    sourceFolder.file(entry.file.name, await entry.file.arrayBuffer());
+                }
+
+                const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+                Object.assign(document.createElement('a'), {
+                    href: URL.createObjectURL(blob),
+                    download: 'Nobleo_Documenten.zip'
+                }).click();
+                statusEl.innerText = '✅ Klaar. Download gestart.';
+                statusEl.style.color = '#39d6b2';
+            } catch (e) {
+                statusEl.innerText = '❌ Er is een fout opgetreden.';
+                console.error(e);
+            } finally { resetButtons(); }
         }
     </script>
 </body>
