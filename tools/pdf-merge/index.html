@@ -189,6 +189,40 @@
         .wm-val { font-size: 0.8rem; color: var(--text-muted); min-width: 46px; text-align: right; }
 
         /* ── Download buttons ── */
+        /* ── Info bubble tooltip ── */
+        .info-bubble {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 16px; height: 16px; border-radius: 50%;
+            background: var(--border-color); color: var(--text-muted);
+            font-size: 0.68rem; font-weight: 700; font-style: normal;
+            cursor: help; position: relative; flex-shrink: 0; user-select: none;
+            transition: background 0.15s;
+        }
+        .info-bubble:hover { background: var(--button-bg); color: var(--button-text); }
+        .info-bubble::before, .info-bubble::after {
+            position: absolute; left: 50%; pointer-events: none;
+            opacity: 0; transition: opacity 0.15s; z-index: 200;
+        }
+        .info-bubble::after {
+            content: attr(data-tooltip);
+            bottom: calc(100% + 9px);
+            transform: translateX(-50%);
+            background: var(--text-main); color: var(--container-bg);
+            font-size: 0.75rem; font-weight: 400; line-height: 1.45;
+            padding: 8px 11px; border-radius: 8px; width: 230px;
+            white-space: normal; text-align: left;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+        }
+        .info-bubble::before {
+            content: '';
+            bottom: calc(100% + 4px);
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: var(--text-main);
+        }
+        .info-bubble:hover::before, .info-bubble:hover::after { opacity: 1; }
+
+        /* ── Download buttons ── */
         .btn-group { display: flex; gap: 10px; margin-bottom: 0; }
         .btn-group .main-btn { flex: 1; font-size: 0.88rem; padding: 0.85rem 1rem; }
         .btn-secondary {
@@ -245,7 +279,8 @@
             <div id="watermarkWrap" style="display:none;">
                 <label class="option-row" style="margin-bottom:0;">
                     <input type="checkbox" id="watermarkToggle" onchange="toggleWatermarkPanel()">
-                    <span>Watermerk toevoegen aan elke pagina</span>
+                    <span>Bron bestandsnaam toevoegen als watermerk op elke pagina</span>
+                    <i class="info-bubble" data-tooltip="Voegt de naam van het bronbestand als watermerk toe op elke pagina. Zo is achteraf te herleiden welk invoerbestand de bron van elke pagina was.">i</i>
                 </label>
 
                 <div id="watermarkPanel" class="wm-panel" style="display:none;">
