@@ -525,7 +525,7 @@
                     <span class="drag-handle" title="Versleep om volgorde te wijzigen">⠿</span>
                     <div class="thumb-wrap">${thumbHtml}</div>
                     <div class="file-info">
-                        <span class="file-name" title="${entry.file.name}">${entry.file.name}</span>
+                        <span class="file-name" title="${entry.displayName}">${entry.displayName}</span>
                         <span class="file-pages">${
                             entry.pageCount === null  ? 'Laden...' :
                             entry.type === 'image'    ? '🖼️ Afbeelding' :
@@ -674,13 +674,13 @@
                         : await mergedPdf.embedPng(bytes);
                     const page = mergedPdf.addPage([img.width, img.height]);
                     page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
-                    if (useWatermark) applyWatermark(page, entry.file.name, font);
+                    if (useWatermark) applyWatermark(page, entry.displayName, font);
                 } else {
                     const srcPdf      = await PDFDocument.load(bytes);
                     const copiedPages = await mergedPdf.copyPages(srcPdf, srcPdf.getPageIndices());
                     for (const page of copiedPages) {
                         mergedPdf.addPage(page);
-                        if (useWatermark) applyWatermark(page, entry.file.name, font);
+                        if (useWatermark) applyWatermark(page, entry.displayName, font);
                     }
                 }
             }
@@ -730,7 +730,7 @@
                 zip.file('Nobleo_Samengevoegd.pdf', pdfBytes);
                 const sourceFolder = zip.folder('Source Files');
                 for (const entry of uploadedFiles) {
-                    sourceFolder.file(entry.file.name, await entry.file.arrayBuffer());
+                    sourceFolder.file(entry.displayName, await entry.file.arrayBuffer());
                 }
 
                 const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
