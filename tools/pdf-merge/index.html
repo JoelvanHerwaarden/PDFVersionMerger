@@ -188,6 +188,25 @@
         .wm-range { flex: 1; accent-color: var(--button-bg); cursor: pointer; height: 4px; }
         .wm-val { font-size: 0.8rem; color: var(--text-muted); min-width: 46px; text-align: right; }
 
+        /* ── Folder button ── */
+        .folder-btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; padding: 0.7rem 1rem;
+            background: var(--container-bg);
+            border: 2px dashed var(--border-color);
+            border-radius: 14px;
+            color: var(--text-muted);
+            font-size: 0.88rem; font-weight: 600;
+            cursor: pointer;
+            transition: border-color 0.2s, color 0.2s, background 0.2s;
+            margin-bottom: 1.5rem;
+        }
+        .folder-btn:hover {
+            border-color: var(--button-bg);
+            color: var(--text-main);
+            background: var(--card-bg);
+        }
+
         /* ── Download buttons ── */
         /* ── Info bubble tooltip ── */
         .info-bubble {
@@ -262,6 +281,11 @@
                 <span class="upload-zone-label">Klik of sleep bestanden hiernaartoe</span>
                 <span class="upload-zone-sub">PDF, JPG en PNG zijn ondersteund · Meerdere bestanden tegelijk</span>
             </div>
+
+            <input type="file" id="folderInput" webkitdirectory multiple style="display:none">
+            <button class="folder-btn" onclick="document.getElementById('folderInput').click()">
+                📁 Map(pen) selecteren — zoekt automatisch naar PDF, JPG en PNG in submappen
+            </button>
 
             <div id="fileCountWrap" style="display:none;">
                 <div class="file-count-badge">
@@ -375,6 +399,12 @@
         const fileInput  = document.getElementById('fileInput');
 
         fileInput.addEventListener('change', () => handleNewFiles(fileInput.files));
+
+        const folderInput = document.getElementById('folderInput');
+        folderInput.addEventListener('change', () => {
+            handleNewFiles(folderInput.files);
+            folderInput.value = '';
+        });
         uploadZone.addEventListener('dragenter', (e) => { e.preventDefault(); uploadZone.classList.add('drag-active'); });
         uploadZone.addEventListener('dragleave', (e) => { if (!uploadZone.contains(e.relatedTarget)) uploadZone.classList.remove('drag-active'); });
         uploadZone.addEventListener('dragover',  (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
@@ -385,17 +415,24 @@
         });
 
         async function handleNewFiles(files) {
-            const accepted = Array.from(files).filter(f =>
+            let accepted = Array.from(files).filter(f =>
                 f.type === 'application/pdf' || f.type === 'image/jpeg' || f.type === 'image/png'
             );
             if (!accepted.length) return;
+
+            // Sort folder files by their relative path so nested structure stays predictable
+            const fromFolder = accepted.some(f => f.webkitRelativePath);
+            if (fromFolder) {
+                accepted.sort((a, b) => a.webkitRelativePath.localeCompare(b.webkitRelativePath));
+            }
 
             const newEntries = accepted.map(file => ({
                 file,
                 type: file.type === 'application/pdf' ? 'pdf' : 'image',
                 pageCount: null,
                 thumbDataUrl: null,
-                id: Date.now() + Math.random()
+                id: Date.now() + Math.random(),
+                displayName: file.webkitRelativePath || file.name
             }));
             uploadedFiles.push(...newEntries);
             renderFileList();
